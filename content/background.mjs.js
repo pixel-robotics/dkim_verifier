@@ -96,7 +96,33 @@ async function verifyMessage(tabId, message) {
 		if (res.dmarc && res.dmarc[0]) {
 			arh.dmarc = res.dmarc[0].result;
 		}
+		let has_error = false;
 
+		switch (res.dkim[0].res_num) {
+			case AuthVerifier.DKIM_RES.TEMPFAIL:
+			case AuthVerifier.DKIM_RES.PERMFAIL:
+			case AuthVerifier.DKIM_RES.PERMFAIL_NOSIG:
+			case AuthVerifier.DKIM_RES.NOSIG:
+				has_error = true;
+				break;
+		}
+
+		// check if message.author domain is in logivations.com or pixel-robotics.eu, otherwise add a warning
+		const authorDomain = MsgParser.parseAuthor(message.author, prefs["internationalized.enable"]);
+		// simply check text after  @
+		const domain = authorDomain.split('@')[1];
+		if(has_error){
+			if (domain !== 'logivations.com' && domain !== 'pixel-robotics.eu') {
+				warnings.push(browser.i18n.getMessage("DKIM_WARNING_ADDRESS_NOT_VERIFIED"));
+			} else {
+				warnings.push(browser.i18n.getMessage("DKIM_WARNING_SPOOFING_OUR_DOMAIN"));
+			}
+		} else {
+			if (domain !== 'logivations.com' && domain !== 'pixel-robotics.eu') {
+				warnings.push(browser.i18n.getMessage("DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS"));
+			}
+		}
+		
 		const messageStillDisplayed = await browser.dkimHeader.setDkimHeaderResult(
 			tabId,
 			message.id,
@@ -109,7 +135,7 @@ async function verifyMessage(tabId, message) {
 			log.debug("Showing of DKIM result skipped because message is no longer displayed");
 			return;
 		}
-		browser.dkimHeader.showDkimHeader(tabId, message.id, prefs.showDKIMHeader >= res.dkim[0].res_num);
+		browser.dkimHeader.showDkimHeader(tabId, message.id, true);
 		if (prefs.showDKIMFromTooltip > SHOW.NEVER && prefs.showDKIMFromTooltip < res.dkim[0].res_num) {
 			browser.dkimHeader.showFromTooltip(tabId, message.id, false);
 		}
@@ -136,12 +162,27 @@ async function verifyMessage(tabId, message) {
 				default:
 					throw new Error(`unknown res_num: ${res.dkim[0].res_num}`);
 			}
+
+			console.log(message)
 		}
 	} catch (e) {
 		log.fatal("Unexpected error during verifyMessage", e);
+
+		// check if message.author domain is in logivations.com or pixel-robotics.eu, otherwise add a warning
+		const authorDomain = MsgParser.parseAuthor(message.author, prefs["internationalized.enable"]);
+		// simply check text after  @
+		const domain = authorDomain.split('@')[1];
+		/**
+		 * @type {string[]}
+		 */
+		let warnings = [];
+		if (domain !== 'logivations.com' && domain !== 'pixel-robotics.eu') {
+			warnings.push(browser.i18n.getMessage("DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS"));
+		}
+
 		browser.dkimHeader.showDkimHeader(tabId, message.id, true);
 		browser.dkimHeader.setDkimHeaderResult(
-			tabId, message.id, browser.i18n.getMessage("DKIM_INTERNALERROR_NAME"), [], "", {});
+			tabId, message.id, browser.i18n.getMessage("DKIM_INTERNALERROR_NAME"), warnings, "", {});
 	}
 }
 

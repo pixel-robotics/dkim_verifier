@@ -40,6 +40,15 @@
 	"DKIM_INTERNALERROR_NAME": {
 		"message": "Internal error"
 	},
+	"DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS": {
+		"message": "WARNING: External email. Might be a phishing attack. Carefully consider clicking links or opening attachments."
+	},
+	"DKIM_WARNING_ADDRESS_NOT_VERIFIED": {
+		"message": "WARNING: E-mail address is not verified. Carefully consider clicking links or opening attachments."
+	},
+	"DKIM_WARNING_SPOOFING_OUR_DOMAIN": {
+		"message": "ERROR: Not from our domain. Forward mail to IT and then delete the e-mail immediately."
+	},
 	"DKIM_INTERNALERROR_DEFAULT": {
 		"message": "error"
 	},
@@ -589,7 +598,7 @@
 		"message": "About"
 	},
 	"about_name": {
-		"message": "DKIM Verifier",
+		"message": "Logivations and Pixel Robotics DKIM Verifier",
 		"description": "Name of the add-on"
 	},
 	"about_summary": {

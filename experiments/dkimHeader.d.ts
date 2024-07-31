@@ -12,6 +12,7 @@ interface DKIMTooltipTarget extends HTMLElement {
 
 interface DKIMHeaderFieldElement extends HTMLDivElement {
     _dkimValue: XULElement
+    _warningBox: XULElement
     _dkimWarningIcon: XULElement
     _dkimWarningTooltip: DKIMWarningsTooltipXULElement
     _arhDkim: { box: XULElement, value: XULElement }

@@ -446,6 +446,15 @@ class DKIMHeaderField {
 		this.element._dkimValue = document.createElement("span");
 		this.element._dkimValue.style.userSelect = "text";
 
+		// Not our domain warning text
+		this.element._warningBox = document.createElement("div");
+		this.element._warningBox.style.userSelect = "text";
+		this.element._warningBox.style.borderRadius = "3px";
+		this.element._warningBox.style.padding = "20px";
+		this.element._warningBox.style.backgroundColor = "orange";
+		this.element._warningBox.style.fontSize = "large";
+		
+
 		// DKIM warning icon
 		/** @private */
 		this._dkimWarningTooltip = new DKIMWarningsTooltipXUL(document);
@@ -497,6 +506,7 @@ class DKIMHeaderField {
 		const separator = document.createXULElement("separator");
 		separator.setAttribute("flex", "1");
 
+		headerValue.appendChild(this.element._warningBox);
 		headerValue.appendChild(this.element._dkimValue);
 		headerValue.appendChild(this.element._dkimWarningIcon);
 		headerValue.appendChild(this.element._arhDkim.box);
@@ -525,10 +535,23 @@ class DKIMHeaderField {
 	set warnings(warnings) {
 		if (warnings.length) {
 			this.element._dkimWarningIcon.style.display = "";
+			this.element._warningBox.style.display = "";
 		} else {
 			this.element._dkimWarningIcon.style.display = "none";
+			this.element._warningBox.style.display = "none";
 		}
 		this._dkimWarningTooltip.warnings = warnings;
+		// concat text (from warnings) and set text contenct for _warningBox
+		this.element._warningBox.textContent = warnings.join(" ");
+		// check if this.element._warningBox.textContent contains the substriong "delete"
+		// if so, set the background color to red, otherwise to orange
+		if (this.element._warningBox.textContent.includes("ERROR")) {
+			this.element._warningBox.style.backgroundColor = "red";
+			this.element._warningBox.style.padding = "30px";
+		} else {
+			this.element._warningBox.style.backgroundColor = "orange";
+			this.element._warningBox.style.padding = "20px";
+		}
 	}
 
 	/**
