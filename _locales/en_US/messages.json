@@ -47,7 +47,7 @@
 		"message": "WARNING: E-mail address is not verified. Carefully consider clicking links or opening attachments."
 	},
 	"DKIM_WARNING_SPOOFING_OUR_DOMAIN": {
-		"message": "ERROR: Not from our domain. Forward mail to IT and then delete the e-mail immediately."
+		"message": "Phishing Attack! Forward mail to security@pixel-robotics.eu and then delete it immediately."
 	},
 	"DKIM_INTERNALERROR_DEFAULT": {
 		"message": "error"

@@ -1,0 +1,12 @@
+{
+    "addons": {
+      "lv_pr_dkim_verifier@lvpr": {
+        "updates": [
+          {
+            "version": "5.4.1",
+            "update_link": "https://example.com/addon-0.1.xpi"
+          }
+        ]
+      }
+    }
+  }

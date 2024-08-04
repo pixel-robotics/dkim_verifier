@@ -7,10 +7,10 @@
 	"homepage_url": "https://github.com/pixel-robotics/dkim_verifier",
 	"default_locale": "en_US",
 	"applications": {
-		"gecko": {
-			"id": "dkim_verifier@pl",
+		"gecko": {	
+			"id": "lv_pr_dkim_verifier@lvpr",
 			"strict_min_version": "91.0",
-			"strict_max_version": "121.*"
+			"update_url": "https://raw.githubusercontent.com/pixel-robotics/dkim_verifier/master/updates.json"
 		}
 	},
 	"permissions": [

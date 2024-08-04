@@ -533,24 +533,50 @@ class DKIMHeaderField {
 	 * @param {string[]} warnings
 	 */
 	set warnings(warnings) {
-		if (warnings.length) {
-			this.element._dkimWarningIcon.style.display = "";
-			this.element._warningBox.style.display = "";
-		} else {
+		if (!warnings.length) {
 			this.element._dkimWarningIcon.style.display = "none";
 			this.element._warningBox.style.display = "none";
 		}
-		this._dkimWarningTooltip.warnings = warnings;
 		// concat text (from warnings) and set text contenct for _warningBox
-		this.element._warningBox.textContent = warnings.join(" ");
 		// check if this.element._warningBox.textContent contains the substriong "delete"
 		// if so, set the background color to red, otherwise to orange
-		if (this.element._warningBox.textContent.includes("ERROR")) {
-			this.element._warningBox.style.backgroundColor = "red";
-			this.element._warningBox.style.padding = "30px";
-		} else {
-			this.element._warningBox.style.backgroundColor = "orange";
-			this.element._warningBox.style.padding = "20px";
+		for (let i = 0; i < warnings.length; i++) {
+			const w = warnings[i];
+			if(!w){
+				continue
+			}
+			let colorar = w.match(/@@.*@@/);
+			if (colorar) {
+				let color = colorar[0];
+				// extract and remove the string starting and ending with @			
+				this.element._warningBox.textContent = w.replace(color, "");
+				color = color.replace(/@@/g, "");
+				this.element._warningBox.style.backgroundColor = color;
+				if(color =="red"){
+					this.element._warningBox.style.padding = "30px";
+					this.element._warningBox.style.fontSize = "large";
+				} else if (color == "orange") {
+					this.element._warningBox.style.padding = "20px";
+					this.element._warningBox.style.fontSize = "large";
+				}else {
+					this.element._warningBox.style.padding = "5px";
+					this.element._warningBox.style.fontSize = "initial";
+				}
+			} else {
+				this.element._warningBox.style.padding = "20px";
+			}
+		}
+		
+
+		// filer warnings which have no @
+		let filtered_warnings = warnings.filter(w => !w.includes("@@"));
+
+		this._dkimWarningTooltip.warnings = filtered_warnings;
+		if (warnings.length) {
+			this.element._warningBox.style.display = "";
+		}
+		if (filtered_warnings.length) {
+			this.element._dkimWarningIcon.style.display = "";
 		}
 	}
 

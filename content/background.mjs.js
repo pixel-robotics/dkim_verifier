@@ -74,6 +74,7 @@ const verifier = new AuthVerifier();
 // eslint-disable-next-line complexity
 async function verifyMessage(tabId, message) {
 	try {
+		console.log(message)
 		// show from tooltip if not completely disabled
 		if (prefs.showDKIMFromTooltip > SHOW.NEVER) {
 			browser.dkimHeader.showFromTooltip(tabId, message.id, true);
@@ -84,7 +85,8 @@ async function verifyMessage(tabId, message) {
 			throw new Error("Result does not contain a DKIM result.");
 		}
 		displayedResultsCache.set(tabId, res);
-		const warnings = res.dkim[0].warnings_str ?? [];
+		const warnings_ref = res.dkim[0].warnings_str ?? [];
+		const warnings = [...warnings_ref];
 		/** @type {Parameters<typeof browser.dkimHeader.setDkimHeaderResult>[5]} */
 		const arh = {};
 		if (res.arh && res.arh.dkim && res.arh.dkim[0]) {
@@ -108,18 +110,31 @@ async function verifyMessage(tabId, message) {
 		}
 
 		// check if message.author domain is in logivations.com or pixel-robotics.eu, otherwise add a warning
-		const authorDomain = MsgParser.parseAuthor(message.author, prefs["internationalized.enable"]);
-		// simply check text after  @
-		const domain = authorDomain.split('@')[1];
-		if(has_error){
-			if (domain !== 'logivations.com' && domain !== 'pixel-robotics.eu') {
-				warnings.push(browser.i18n.getMessage("DKIM_WARNING_ADDRESS_NOT_VERIFIED"));
-			} else {
-				warnings.push(browser.i18n.getMessage("DKIM_WARNING_SPOOFING_OUR_DOMAIN"));
-			}
+		let from = message.author;
+		try {
+			from = MsgParser.parseAuthor(message.author, prefs["internationalized.enable"]);
+		
+		}  catch (e) {
+			log.error("Error parsing author", e);
+			// parse manually
+			from = from.substring(from.lastIndexOf('<') + 1, from.lastIndexOf('>'));
+		}
+		// @ts-ignore
+		if(message.folder && message.folder.type && (message.folder.type == "drafts" || message.folder.type == "sent")){
+			has_error = false;
 		} else {
-			if (domain !== 'logivations.com' && domain !== 'pixel-robotics.eu') {
-				warnings.push(browser.i18n.getMessage("DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS"));
+			// simply check text after  @
+			const domain = from.split('@')[1];
+			if(has_error){
+				if (domain !== 'logivations.com' && domain !== 'pixel-robotics.eu') {
+					warnings.push("@@orange@@"+browser.i18n.getMessage("DKIM_WARNING_ADDRESS_NOT_VERIFIED"));
+				} else {
+					warnings.push("@@red@@"+browser.i18n.getMessage("DKIM_WARNING_SPOOFING_OUR_DOMAIN"));
+				}
+			} else {
+				if (domain !== 'logivations.com' && domain !== 'pixel-robotics.eu') {
+					warnings.push("@@yellow@@"+browser.i18n.getMessage("DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS"));
+				}
 			}
 		}
 		
@@ -163,21 +178,27 @@ async function verifyMessage(tabId, message) {
 					throw new Error(`unknown res_num: ${res.dkim[0].res_num}`);
 			}
 
-			console.log(message)
 		}
 	} catch (e) {
 		log.fatal("Unexpected error during verifyMessage", e);
-
+		let author = message.author;
 		// check if message.author domain is in logivations.com or pixel-robotics.eu, otherwise add a warning
-		const authorDomain = MsgParser.parseAuthor(message.author, prefs["internationalized.enable"]);
+		try {
+			author = MsgParser.parseAuthor(message.author, prefs["internationalized.enable"]);
+		
+		}  catch (e) {
+			log.error("Error parsing author", e);
+			// parse manually
+			author = author.substring(author.lastIndexOf('<') + 1, author.lastIndexOf('>'));
+		}
 		// simply check text after  @
-		const domain = authorDomain.split('@')[1];
+		const domain = author.split('@')[1];
 		/**
 		 * @type {string[]}
 		 */
 		let warnings = [];
 		if (domain !== 'logivations.com' && domain !== 'pixel-robotics.eu') {
-			warnings.push(browser.i18n.getMessage("DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS"));
+			warnings.push("@@orange@@"+browser.i18n.getMessage("DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS"));
 		}
 
 		browser.dkimHeader.showDkimHeader(tabId, message.id, true);
@@ -322,8 +343,17 @@ class DisplayAction {
 		if (!message) {
 			return;
 		}
+		let from = message.author;
+		// check if message.author domain is in logivations.com or pixel-robotics.eu, otherwise add a warning
+		try {
+			from = MsgParser.parseAuthor(message.author, prefs["internationalized.enable"]);
+		
+		}  catch (e) {
+			log.error("Error parsing author", e);
+			// parse manually
+			from = from.substring(from.lastIndexOf('<') + 1, from.lastIndexOf('>'));
+		}
 
-		const from = MsgParser.parseAuthor(message.author, prefs["internationalized.enable"]);
 		await SignRules.addException(from);
 
 		await DisplayAction.#reverifyMessage(tabId, message);

@@ -28,6 +28,15 @@
 	"DKIM_INTERNALERROR_NAME": {
 		"message": "Erreur interne"
 	},
+	"DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS": {
+		"message": "WARNING: External email. Might be a phishing attack. Carefully consider clicking links or opening attachments."
+	},
+	"DKIM_WARNING_ADDRESS_NOT_VERIFIED": {
+		"message": "WARNING: E-mail address is not verified. Carefully consider clicking links or opening attachments."
+	},
+	"DKIM_WARNING_SPOOFING_OUR_DOMAIN": {
+		"message": "Phishing Attack! Forward mail to security@pixel-robotics.eu and then delete it immediately."
+	},
 	"DKIM_INTERNALERROR_DEFAULT": {
 		"message": "erreur"
 	},

@@ -44,10 +44,10 @@
 		"message": "Achtung: Externe email. Mögliche Phishing-Attacke. Vorsicht bei Links und Anhängen."
 	},
 	"DKIM_WARNING_ADDRESS_NOT_VERIFIED": {
-		"message": "Achtung: E-mail-Adresse nicht verifiziert. Mögliche Phishing-Attacke. Vorsicht bei Links und Anhängen."
+		"message": "WARNING: E-mail-Adresse nicht verifiziert. Mögliche Phishing-Attacke. Vorsicht bei Links und Anhängen."
 	},
 	"DKIM_WARNING_SPOOFING_OUR_DOMAIN": {
-		"message": "ERROR: Nicht von unserer Domain. E-mail an IT weiterleiten und danach direkt löschen."
+		"message": "Phishing-Angriff! Email an security@pixel-robotics.eu weiterleiten und danach löschen."
 	},
 	"DKIM_INTERNALERROR_DEFAULT": {
 		"message": "Fehler"
