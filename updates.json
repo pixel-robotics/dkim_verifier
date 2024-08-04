@@ -3,10 +3,6 @@
       "lv_pr_dkim_verifier@lvpr": {
         "updates": [
           {
-            "version": "5.4.2",
-            "update_link": "https://raw.githubusercontent.com/pixel-robotics/dkim_verifier/master/releases/dkim_verifier%40pl.xpi"
-          },
-          {
             "version": "5.4.5",
             "update_link": "https://raw.githubusercontent.com/pixel-robotics/dkim_verifier/master/releases/dkim_verifier545%40pl.xpi"
           }
