@@ -5,6 +5,10 @@
           {
             "version": "5.4.2",
             "update_link": "https://raw.githubusercontent.com/pixel-robotics/dkim_verifier/master/releases/dkim_verifier%40pl.xpi"
+          },
+          {
+            "version": "5.4.2",
+            "update_link": "https://raw.githubusercontent.com/pixel-robotics/dkim_verifier/master/releases/dkim_verifier544%40pl.xpi"
           }
         ]
       }
