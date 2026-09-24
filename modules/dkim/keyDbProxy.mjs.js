@@ -11,8 +11,8 @@
  */
 
 // @ts-check
+/* eslint-disable jsdoc/reject-any-type */
 ///<reference path="../../RuntimeMessage.d.ts" />
-/* eslint-env webextensions */
 
 export default class KeyDbProxy {
 	/**

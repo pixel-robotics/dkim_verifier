@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020-2023 Philippe Lieser
+ * Copyright (c) 2020-2023;2025 Philippe Lieser
  *
  * This software is licensed under the terms of the MIT License.
  *
@@ -11,7 +11,7 @@
 // @ts-check
 ///<reference path="./jsdns.d.ts" />
 ///<reference path="./mozilla.d.ts" />
-/* global ExtensionCommon, Services */
+/* global ExtensionCommon */
 
 "use strict";
 
@@ -44,7 +44,6 @@ this.jsdns = class extends ExtensionCommon.ExtensionAPI {
 	 */
 	getAPI(context) {
 		/** @enum {number} */
-		// eslint-disable-next-line no-extra-parens
 		const RCODE = /** @type {const} */ ({
 			NoError: 0, // No Error [RFC1035]
 			FormErr: 1, // Format Error [RFC1035]
@@ -53,8 +52,8 @@ this.jsdns = class extends ExtensionCommon.ExtensionAPI {
 			NotImp: 4, // Non-Existent Domain [RFC1035]
 			Refused: 5, // Query Refused [RFC1035]
 		});
-		/** @type {{JSDNS: {configureDNS: typeof configureDNS, queryDNS: typeof queryDNS}}} */
-		const { JSDNS } = ChromeUtils.import("chrome://dkim_verifier_jsdns/content/JSDNS.jsm.js");
+		/** @type {import("./JSDNS.mjs")} */
+		const { JSDNS } = ChromeUtils.importESModule(`chrome://dkim_verifier_jsdns/content/JSDNS.mjs?${Date.now()}`);
 		this.extension.callOnClose(this);
 		return {
 			jsdns: {
@@ -70,13 +69,9 @@ this.jsdns = class extends ExtensionCommon.ExtensionAPI {
 					if (res.rcode !== undefined) {
 						resRcode = res.rcode;
 					} else if (res.queryError !== undefined) {
-						let error = "";
-						if (typeof res.queryError === "string") {
-							error = res.queryError;
-						} else {
-							error = context.extension.localeData.localizeMessage(res.queryError[0] ?? "DKIM_DNSERROR_UNKNOWN", res.queryError[1]) ||
-								(res.queryError[0] ?? "Unknown DNS error");
-						}
+						const error = typeof res.queryError === "string"
+							? res.queryError
+							: context.extension.localeData.localizeMessage(res.queryError[0] ?? "DKIM_DNSERROR_UNKNOWN", res.queryError[1]) || (res.queryError[0] ?? "Unknown DNS error");
 						console.warn(`JSDNS failed with: ${error}`);
 						return {
 							error,
@@ -85,7 +80,7 @@ this.jsdns = class extends ExtensionCommon.ExtensionAPI {
 
 					const results = res.results?.map(rdata => {
 						if (typeof rdata !== "string") {
-							throw new Error(`DNS result has unexpected type ${typeof rdata}`);
+							throw new TypeError(`DNS result has unexpected type ${typeof rdata}`);
 						}
 						return rdata;
 					});
@@ -102,8 +97,6 @@ this.jsdns = class extends ExtensionCommon.ExtensionAPI {
 	}
 
 	close() {
-		Cu.unload("chrome://dkim_verifier_jsdns/content/JSDNS.jsm.js");
-
 		this.chromeHandle.destruct();
 		// @ts-expect-error
 		this.chromeHandle = null;

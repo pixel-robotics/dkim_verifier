@@ -4,16 +4,135 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 6.3.0 (2026-05-31)
 
 ### Enhancements
 
-- Improved table views for sign rules and DKIM keys (#248, #305).
-  E.g. it is now possible to delete multiple entries at once.
+- Added support for DNS Queries over HTTPS (DoH) (#579).
+- Added info note about updating outdated cached keys potentially fixing an invalid signature error (#569).
+- Added tooltips to the action buttons in the DKIM button pop-up (#569).
+
+### Fixes
+
+- Fixed tooltip for favicon in Thunderbird 152.
+- Fixed colors in options in Thunderbird 152.
 
 ### Other
 
-- Updated default rules and favicons (#440, #444, #447).
+- Updated default rules and favicons.
+
+## 6.2.1 (2026-04-07)
+
+### Fixes
+
+- Fix display of DKIM keys and sign rules in case the `navigator.userAgent` preference is set to an empty string (#560).
+
+### Other
+
+- Added Russian translation.
+- Added Slovak translation (#562).
+- Updated default rules and favicons (#561, #570, #573, #576).
+
+## 6.2.0 (2025-09-18)
+
+### Enhancements
+
+- Authentication-Results header: Sort DKIM, SPF and DMARC results from ARH, even when not replacing the add-ons verification (#534).
+- Authentication-Results header: All results are now accepted if reading of non RFC compliant ARHs is enabled (#547).
+  This improves support for invalid headers by Outlook.
+- Detect outgoing messages in Locals Folder (#114).
+- Provide preview of the colors for the From header highlighting (#439).
+
+### Fixes
+
+- Libunbound resolver: Make unloading of libraries more robust in case the wrong one got loaded.
+- Fix alignment of warning symbol on MacOS (#531).
+
+### Other
+
+- Updated default rules and favicons.
+
+## 6.1.0 (2025-06-01)
+
+### Enhancements
+
+- Added an option to display the DKIM header when an e-mail with a DKIM signature, SPF or DMARC result is viewed (#462).
+- Authentication-Results header: Invalid headers by Outlook are now accepted if reading of non RFC compliant ARHs is enabled (#423).
+- The DKIM selector is now displayed in the DKIM button pop-up (#510).
+- The options page of the add-on can now be opened from the DKIM button pop-up.
+
+### Fixes
+
+- Fixed parsing of a From header that contains MIME encoded non-ASCII characters when reading a saved result (#529).
+
+### Other
+
+- Updated default rules and favicons.
+
+## 6.0.1 (2025-03-10)
+
+### Fixes
+
+- Fixed the JavaScript DNS library resolver (#501).
+
+## 6.0.0 (2025-03-09)
+
+### Breaking Changes
+
+- Now requires at least Thunderbird 128.
+- Remove migration of options from versions before 4.0.0.
+
+### Enhancements
+
+- Fixed incompatibility with Thunderbird 136 (#494).
+- Authentication-Results header: Improve default behavior about which headers are trusted.
+  Instead of trusting all it now depends on the newest ARH (#465).
+
+### Fixes
+
+- If the DKIM result fails because of the check of the sign rules the detailed view now still shows the details of the DKIM signature (#495).
+- Authentication-Results header: If only an AUID is included again heuristically extract the SDID from it.
+- Fixed setting default values for boolean preferences with policies on macOS via a `.plist` (#499).
+
+### Other
+
+- Updated default rules and favicons (#497).
+
+## 5.6.0 (2025-02-17)
+
+### Enhancements
+
+- Support setting default values for preferences with managed storage (#268).
+- An explicit alignment between the AUID and the From address is no longer enforced.
+- Authentication-Results header: If replacing the add-ons verification, the SDID alignment is checked against the From address (#452).
+- Authentication-Results header: If replacing the add-ons verification, the signature and hash algorithm are now shown in the details view.
+
+### Fixes
+
+- Encoding errors in the RSA/Ed25519 key or signature now result in an invalid DKIM signature instead of an internal error.
+
+## 5.5.0 (2025-01-11)
+
+### Enhancements
+
+- Show all DKIM signatures with additional details in the DKIM button pop-up (#160, #299).
+- Improved table views for sign rules and DKIM keys (#248, #305).
+  E.g. it is now possible to delete multiple entries at once.
+- Allow multiple `*` globs in the From pattern of sign rules (#471, #472).
+- Changed the default color scheme for highlighting of the From header to better work with dark mode (#460).
+- Changed the header icon to now have the same colors as Thunderbirds own icons.
+
+### Fixes
+
+- Fixed potential parsing error when extracting the received time from the last Received header (#455).
+- When parsing now support comments inside comments up to a recursion of 3 (#466).
+
+### Other
+
+- Added Vietnamese translation (by vtvinh24) (#485).
+- Updated default rules and favicons (#440, #443, #444, #447, #457, #461).
+- Updated Brazilian Portuguese translations (#450).
+- Updated French translations (#459).
 
 ## 5.4.0 (2023-11-16)
 

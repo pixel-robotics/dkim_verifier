@@ -261,9 +261,6 @@
 	"DKIM_SIGWARNING_FROM_NOT_IN_SDID": {
 		"message": "From 不在签名域中"
 	},
-	"DKIM_SIGWARNING_FROM_NOT_IN_AUID": {
-		"message": "From 不匹配用户标识符"
-	},
 	// JSDNS
 	"TOO_MANY_HOPS": {
 		"message": "太多跳数。"
@@ -327,7 +324,7 @@
 		"message": "从操作系统的配置获取 DNS 名称服务器"
 	},
 	"options_dns.nameserver": {
-		"message": "DNS 名称服务器 (语法 (EBNF): host[\":\"port]{\";\"host[\":\"port]} ):"
+		"message": "DNS 名称服务器 ( 语法 (EBNF): host[\":\"port]{\";\"host[\":\"port]} ):"
 	},
 	"options_dns.timeout_connect": {
 		"message": "DNS 连接超时 (秒):"

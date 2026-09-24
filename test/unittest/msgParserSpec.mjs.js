@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020-2023 Philippe Lieser
+ * Copyright (c) 2020-2023;2025 Philippe Lieser
  *
  * This software is licensed under the terms of the MIT License.
  *
@@ -12,7 +12,7 @@
 import { DKIM_Error } from "../../modules/error.mjs.js";
 import MsgParser from "../../modules/msgParser.mjs.js";
 import expect from "../helpers/chaiUtils.mjs.js";
-import { toBinaryString } from "../helpers/testUtils.mjs.js";
+import { toBinaryString } from "../../modules/utils.mjs.js";
 
 describe("Message parser [unittest]", function () {
 	describe("RFC 6376 Appendix A Example", function () {
@@ -62,8 +62,9 @@ describe("Message parser [unittest]", function () {
 			// @ts-expect-error
 			expect(msg.headers.get("subject")[0]).to.be.equal("Subject: Is dinner ready?\r\n");
 		});
+
 		it("parse LF", function () {
-			const msg = MsgParser.parseMsg(msgPlain.replace(/\r\n/g, "\n"));
+			const msg = MsgParser.parseMsg(msgPlain.replaceAll("\r\n", "\n"));
 			expect(msg.body).to.be.equal(msgBody);
 			expect(msg.headers.size).to.be.equal(7);
 
@@ -73,8 +74,9 @@ describe("Message parser [unittest]", function () {
 			// @ts-expect-error
 			expect(msg.headers.get("subject")[0]).to.be.equal("Subject: Is dinner ready?\r\n");
 		});
+
 		it("parse CR", function () {
-			const msg = MsgParser.parseMsg(msgPlain.replace(/\r\n/g, "\r"));
+			const msg = MsgParser.parseMsg(msgPlain.replaceAll("\r\n", "\r"));
 			expect(msg.body).to.be.equal(msgBody);
 			expect(msg.headers.size).to.be.equal(7);
 
@@ -101,31 +103,35 @@ describe("Message parser [unittest]", function () {
 
 		it("missing newline between header and body", function () {
 			expect(
-				() => MsgParser.parseMsg(msgPlain.replace(/\r\n\r\n/g, "\r\n"))
+				() => MsgParser.parseMsg(msgPlain.replaceAll("\r\n\r\n", "\r\n"))
 			).to.throw(DKIM_Error).with.property("message", "Could not split header into name and value");
 		});
+
 		it("Valid missing body", function () {
-			let msg = MsgParser.parseMsg(msgPlain.replace(/\r\n\r\n.+/gs, "\r\n"));
+			let msg = MsgParser.parseMsg(msgPlain.replaceAll(/\r\n\r\n.+/gs, "\r\n"));
 			expect(msg.body).to.be.equal("");
 			expect(msg.headers.size).to.be.equal(7);
-			msg = MsgParser.parseMsg(msgPlain.replace(/\r\n\r\n.+/gs, "\n"));
+			msg = MsgParser.parseMsg(msgPlain.replaceAll(/\r\n\r\n.+/gs, "\n"));
 			expect(msg.body).to.be.equal("");
 			expect(msg.headers.size).to.be.equal(7);
-			msg = MsgParser.parseMsg(msgPlain.replace(/\r\n\r\n.+/gs, "\r"));
+			msg = MsgParser.parseMsg(msgPlain.replaceAll(/\r\n\r\n.+/gs, "\r"));
 			expect(msg.body).to.be.equal("");
 			expect(msg.headers.size).to.be.equal(7);
 		});
+
 		it("With a missing body the headers still need to end with a newline", function () {
 			expect(
-				() => MsgParser.parseMsg(msgPlain.replace(/\r\n\r\n.+/gs, ""))
+				() => MsgParser.parseMsg(msgPlain.replaceAll(/\r\n\r\n.+/gs, ""))
 			).to.throw(DKIM_Error).with.property("message", "Last header is not ending with a newline");
 		});
+
 		it("Valid empty body", function () {
-			const msg = MsgParser.parseMsg(msgPlain.replace(/\r\n\r\n.+/gs, "\r\n\r\n"));
+			const msg = MsgParser.parseMsg(msgPlain.replaceAll(/\r\n\r\n.+/gs, "\r\n\r\n"));
 			expect(msg.body).to.be.equal("");
 			expect(msg.headers.size).to.be.equal(7);
 		});
 	});
+
 	describe("Extracting From address", function () {
 		describe("addr-spec", function () {
 			it("without comment", function () {
@@ -136,6 +142,7 @@ describe("Message parser [unittest]", function () {
 					MsgParser.parseFromHeader("From:  foo@example.com \r\n")
 				).to.be.equal("foo@example.com");
 			});
+
 			it("with comment", function () {
 				expect(
 					MsgParser.parseFromHeader("From: (comment) foo@example.com\r\n")
@@ -144,12 +151,14 @@ describe("Message parser [unittest]", function () {
 					MsgParser.parseFromHeader("From: (bar@bad.com) foo@example.com\r\n")
 				).to.be.equal("foo@example.com");
 			});
+
 			it("with quoted-string as local part", function () {
 				expect(
 					MsgParser.parseFromHeader('From: "foo bar"@example.com\r\n')
 				).to.be.equal('"foo bar"@example.com');
 			});
 		});
+
 		describe("name-addr", function () {
 			it("angle-addr only", function () {
 				expect(
@@ -159,6 +168,7 @@ describe("Message parser [unittest]", function () {
 					MsgParser.parseFromHeader("From:   <foo@example.com>\t\r\n")
 				).to.be.equal("foo@example.com");
 			});
+
 			it("with simple atoms as display-name", function () {
 				expect(
 					MsgParser.parseFromHeader("From: singleAtom <foo@example.com>\r\n")
@@ -167,6 +177,7 @@ describe("Message parser [unittest]", function () {
 					MsgParser.parseFromHeader("From: this is from foo <foo@example.com>\r\n")
 				).to.be.equal("foo@example.com");
 			});
+
 			it("with simple quoted-string as display-name", function () {
 				expect(
 					MsgParser.parseFromHeader("From: \"this is from foo\" <foo@example.com>\r\n")
@@ -175,6 +186,7 @@ describe("Message parser [unittest]", function () {
 					MsgParser.parseFromHeader("From: \"bar@bad.com\" <foo@example.com>\r\n")
 				).to.be.equal("foo@example.com");
 			});
+
 			it("with comment", function () {
 				expect(
 					MsgParser.parseFromHeader("From: (bar@bad.com) <foo@example.com>\r\n")
@@ -183,6 +195,7 @@ describe("Message parser [unittest]", function () {
 					MsgParser.parseFromHeader("From: A (bar@bad.com) comment <foo@example.com>\r\n")
 				).to.be.equal("foo@example.com");
 			});
+
 			it("with quoted-string as local part", function () {
 				expect(
 					MsgParser.parseFromHeader('From: <"foo bar"@example.com>\r\n')
@@ -191,6 +204,7 @@ describe("Message parser [unittest]", function () {
 					MsgParser.parseFromHeader('From: "a test" <"foo@bar"@example.com>\r\n')
 				).to.be.equal('"foo@bar"@example.com');
 			});
+
 			it("Strange but valid display name", function () {
 				expect(
 					MsgParser.parseFromHeader("From: \"mixed\" atoms \"and quoted-string\" <foo@example.com>\r\n")
@@ -206,6 +220,7 @@ describe("Message parser [unittest]", function () {
 				).to.be.equal("foo@example.com");
 			});
 		});
+
 		it("Casing of From header", function () {
 			expect(
 				MsgParser.parseFromHeader("FROM: foo@example.com\r\n")
@@ -217,6 +232,23 @@ describe("Message parser [unittest]", function () {
 				MsgParser.parseFromHeader("frOm: <foo@example.com>\r\n")
 			).to.be.equal("foo@example.com");
 		});
+
+		it("RFC 2047 8. Examples", function () {
+			expect(
+				MsgParser.parseFromHeader("From: =?US-ASCII?Q?Keith_Moore?= <moore@cs.utk.edu>\r\n")
+			).to.be.equal("moore@cs.utk.edu");
+			expect(
+				MsgParser.parseFromHeader("From: =?ISO-8859-1?Q?Olle_J=E4rnefors?= <ojarnef@admin.kth.se>\r\n")
+			).to.be.equal("ojarnef@admin.kth.se");
+			expect(
+				MsgParser.parseFromHeader("From: =?ISO-8859-1?Q?Patrik_F=E4ltstr=F6m?= <paf@nada.kth.se>\r\n")
+			).to.be.equal("paf@nada.kth.se");
+			expect(
+				MsgParser.parseFromHeader("From: Nathaniel Borenstein <nsb@thumper.bellcore.com>\r\n" +
+					"         (=?iso-8859-8?b?7eXs+SDv4SDp7Oj08A==?=)\r\n")
+			).to.be.equal("nsb@thumper.bellcore.com");
+		});
+
 		it("RFC 5322 Appendix A", function () {
 			// Appendix A.1.1.  A Message from One Person to Another with Simple
 			expect(
@@ -246,6 +278,7 @@ describe("Message parser [unittest]", function () {
 				MsgParser.parseFromHeader("From: Chris Jones <c@(Chris's host.)public.example>\r\n")
 			).to.be.equal("c@public.example");
 		});
+
 		it("RFC 5322 Appendix A - Obsolete", function () {
 			// Obsolete syntax is only partly supported
 
@@ -261,6 +294,7 @@ describe("Message parser [unittest]", function () {
 				MsgParser.parseFromHeader("From: John Doe <jdoe@machine(comment).  example>\r\n")
 			).to.throw();
 		});
+
 		it("Strange but valid whitespace", function () {
 			expect(
 				MsgParser.parseFromHeader("From:foo@example.com\r\n")
@@ -284,6 +318,7 @@ describe("Message parser [unittest]", function () {
 				MsgParser.parseFromHeader("From:\r\n\t=?utf-8?q?(omit)?=\r\n\t=?utf-8?q?(omit)?= <mail@example.com>\r\n")
 			).to.be.equal("mail@example.com");
 		});
+
 		it("mailbox-list", function () {
 			expect(
 				MsgParser.parseFromHeader("From: foo@example.com, user <user@example.com>\r\n")
@@ -303,6 +338,7 @@ describe("Message parser [unittest]", function () {
 				MsgParser.parseFromHeader("From: foo <foo@example.com>, user <user@example.com>, bar@example.com\r\n")
 			).to.be.equal("foo@example.com");
 		});
+
 		it("avoid backtracking issues", function () {
 			// A naive implementation of the phrase pattern can lead to backtracking issues,
 			// especially if it tries but fails to match it to a long string.
@@ -313,6 +349,7 @@ describe("Message parser [unittest]", function () {
 				MsgParser.parseFromHeader("From: noreply-play-developer-console-google.com\r\n")
 			).to.throw();
 		});
+
 		it("malformed", function () {
 			expect(() =>
 				MsgParser.parseFromHeader("From: foo.example.com\r\n")
@@ -333,12 +370,82 @@ describe("Message parser [unittest]", function () {
 				MsgParser.parseFromHeader("To: <foo@example.com>\r\n")
 			).to.throw();
 		});
-		it("From Thunderbirds authors", function () {
+	});
+
+	describe("From Thunderbirds author", function () {
+		it("Valid ASCII", function () {
 			expect(
-				MsgParser.parseAuthor("foo@example.com")
-			).to.be.equal("foo@example.com");
+				MsgParser.parseAuthor("john@example.com")
+			).to.be.equal("john@example.com");
+
+			expect(
+				MsgParser.parseAuthor("John <john@example.com>")
+			).to.be.equal("john@example.com");
+		});
+
+		it("Multiple addresses", function () {
+			expect(
+				MsgParser.parseAuthor("user1 <user1@example.com>, user2@example.com")
+			).to.be.equal("user1@example.com");
+		});
+
+		it("Group", function () {
+			// Group patter is currently not supported
+			expect(() => MsgParser.parseFromHeader(toBinaryString(
+				"GroupName : user1 <user1@example.com>, user2@example.com ;"
+			))).to.throw();
+		});
+
+		it("Valid internationalized", function () {
+			// Thunderbird will give us the already MIME decoded string.
+
+			expect(
+				MsgParser.parseAuthor("Pelé <Pele@example.com>")
+			).to.be.equal("Pele@example.com");
+			expect(
+				MsgParser.parseAuthor("Pelé@example.com")
+			).to.be.equal("Pelé@example.com");
+			expect(
+				MsgParser.parseAuthor("Pelé <Pelé@example.com>")
+			).to.be.equal("Pelé@example.com");
+
+			expect(
+				MsgParser.parseAuthor("δοκιμή <john@example.com>")
+			).to.be.equal("john@example.com");
+			expect(
+				MsgParser.parseAuthor("δοκιμή <δοκιμή@παράδειγμα.δοκιμή>")
+			).to.be.equal("δοκιμή@παράδειγμα.δοκιμή");
+
+			expect(
+				MsgParser.parseAuthor("我買 <john@example.com>")
+			).to.be.equal("john@example.com");
+			expect(
+				MsgParser.parseAuthor("我買 <我買@屋企.香港>")
+			).to.be.equal("我買@屋企.香港");
+
+			expect(
+				MsgParser.parseAuthor("二ノ宮 <john@example.com>")
+			).to.be.equal("john@example.com");
+			expect(
+				MsgParser.parseAuthor("二ノ宮 <二ノ宮@黒川.日本>")
+			).to.be.equal("二ノ宮@黒川.日本");
+
+			expect(
+				MsgParser.parseAuthor("медведь <john@example.com>")
+			).to.be.equal("john@example.com");
+			expect(
+				MsgParser.parseAuthor("медведь <медведь@с-балалайкой.рф>")
+			).to.be.equal("медведь@с-балалайкой.рф");
+
+			expect(
+				MsgParser.parseAuthor("संपर्क <john@example.com>")
+			).to.be.equal("john@example.com");
+			expect(
+				MsgParser.parseAuthor("संपर्क <संपर्क@डाटामेल.भारत>")
+			).to.be.equal("संपर्क@डाटामेल.भारत");
 		});
 	});
+
 	describe("Extracting Reply-To address", function () {
 		it("Valid examples", function () {
 			expect(
@@ -349,6 +456,7 @@ describe("Message parser [unittest]", function () {
 			).to.be.equal("noreply@mail.paypal.de");
 		});
 	});
+
 	describe("Extracting List-Id", function () {
 		it("RFC 2919 examples", function () {
 			expect(
@@ -368,6 +476,7 @@ describe("Message parser [unittest]", function () {
 				MsgParser.parseListIdHeader("List-Id: <da39efc25c530ad145d41b86f7420c3b.052000.localhost>\r\n")
 			).to.be.equal("da39efc25c530ad145d41b86f7420c3b.052000.localhost");
 		});
+
 		it("valid headers", function () {
 			expect(
 				MsgParser.parseListIdHeader("list-ID: <list-header.nisto.com>\r\n")
@@ -379,6 +488,7 @@ describe("Message parser [unittest]", function () {
 				MsgParser.parseListIdHeader('List-Id: "<fake.list.com>" <list-header.nisto.com>\r\n')
 			).to.be.equal("list-header.nisto.com");
 		});
+
 		it("invalid headers", function () {
 			expect(() =>
 				MsgParser.parseListIdHeader("List-Id: missing-angle-brackets.example.com")
@@ -391,6 +501,7 @@ describe("Message parser [unittest]", function () {
 			).to.throw();
 		});
 	});
+
 	describe("Extracting the date from a Received header", function () {
 		it("RFC 6376 Appendix A Example", function () {
 			const received = "Received: from client1.football.example.com  [192.0.2.1]\r\n" +
@@ -399,27 +510,32 @@ describe("Message parser [unittest]", function () {
 			expect(MsgParser.tryExtractReceivedTime(received)).
 				to.be.deep.equal(new Date("2003-07-11T21:01:54.000-07:00"));
 		});
+
 		it("RFC 5322 Appendix A.4. Messages with Trace Fields", function () {
 			const received = "Received: from node.example by x.y.test; 21 Nov 1997 10:01:22 -0600\r\n";
 			expect(MsgParser.tryExtractReceivedTime(received)).
 				to.be.deep.equal(new Date("1997-11-21T10:01:22.000-06:00"));
 		});
+
 		it("Time without seconds", function () {
 			const received = "Received: from node.example by x.y.test; 21 Nov 1997 10:01 -0600\r\n";
 			expect(MsgParser.tryExtractReceivedTime(received)).
 				to.be.deep.equal(new Date("1997-11-21T10:01:00.000-06:00"));
 		});
+
 		it("Missing semicolon", function () {
 			const received = "Received: from node.example by x.y.test 21 Nov 1997 10:01:22 -0600\r\n";
 			expect(MsgParser.tryExtractReceivedTime(received)).
 				to.be.null;
 		});
+
 		it("Invalid date", function () {
 			const received = "Received: from node.example by x.y.test; 41 Nov 1997 10:01:22 -0600\r\n";
 			expect(MsgParser.tryExtractReceivedTime(received)).
 				to.be.null;
 		});
 	});
+
 	describe("Internationalized Email", function () {
 		it("Disabled by default", function () {
 			expect(() => MsgParser.parseFromHeader(toBinaryString(
@@ -429,6 +545,7 @@ describe("Message parser [unittest]", function () {
 				"From: <Pelé@example.com>\r\n"
 			))).to.throw();
 		});
+
 		it("From header", function () {
 			// https://en.wikipedia.org/wiki/E-mail_address#Internationalization_examples
 			// Latin alphabet with diacritics: Pelé@example.com
@@ -471,6 +588,7 @@ describe("Message parser [unittest]", function () {
 				"From: Iñtërnâtiônàlizætiøn☃💩@Iñtërnâtiônàlizætiøn☃💩.test\r\n"
 			), true)).to.be.equal("Iñtërnâtiônàlizætiøn☃💩@Iñtërnâtiônàlizætiøn☃💩.test");
 		});
+
 		it("valid IDNA labels", function () {
 			// Examples from https://unicode.org/reports/tr46/#Table_Example_Processing
 			expect(MsgParser.parseFromHeader(toBinaryString(
@@ -492,7 +610,7 @@ describe("Message parser [unittest]", function () {
 				"From: <foo@☕.us>\r\n"
 			), true)).to.be.equal("foo@☕.us");
 		});
-		// eslint-disable-next-line mocha/no-skipped-tests
+		// eslint-disable-next-line mocha/no-pending-tests
 		xit("invalid IDNA labels", function () {
 			// Test disabled because currently no check for valid IDNA A-label or U-label is done.
 

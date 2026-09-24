@@ -301,9 +301,6 @@
 	"DKIM_SIGWARNING_FROM_NOT_IN_SDID": {
 		"message": "差出人が署名ドメインではありません"
 	},
-	"DKIM_SIGWARNING_FROM_NOT_IN_AUID": {
-		"message": "差出人がユーザ識別子とマッチしません"
-	},
 	"DKIM_SIGWARNING_UNSIGNED_HEADER": {
 		"message": "ヘッダ '$1' は署名されていません",
 		"description": "Warning if an important header is not signed"
@@ -367,11 +364,14 @@
 	"options_dns.resolver.value.2": {
 		"message": "libunbound"
 	},
+	"options_dns.resolver.value.3": {
+		"message": "DNS over HTTPS (DoH)"
+	},
 	"options_dns.getNameserversFromOS": {
 		"message": "OS の設定から DNS サーバを取得"
 	},
 	"options_dns.nameserver": {
-		"message": "DNS サーバ （書式 （EBNF）: host[\":\"port]{\";\"host[\":\"port]} ）:"
+		"message": "DNS サーバ （ 書式 （EBNF）: host[\":\"port]{\";\"host[\":\"port]} ）:"
 	},
 	"options_dns.timeout_connect": {
 		"message": "DNS 接続タイムアウト （秒）:",
@@ -400,6 +400,9 @@
 	},
 	"options_dns.libunbound.path.relToProfileDir": {
 		"message": "プロファイルディレクトリへの相対パス"
+	},
+	"options_dns.doh.server": {
+		"message": "DoH サーバ:"
 	},
 	// ---------- Policy options tab ----------
 	"options_general.policy": {
@@ -476,6 +479,9 @@
 	"options_showDKIM.value.30": {
 		"message": "DKIM 署名付きのメールを閲覧した場合"
 	},
+	"options_showDKIM.value.33": {
+		"message": "DKIM 署名、SPF または DMARC の結果付きのメールを閲覧した場合"
+	},
 	"options_showDKIM.value.40": {
 		"message": "メールを閲覧した場合"
 	},
@@ -493,6 +499,10 @@
 	},
 	"options_color.background": {
 		"message": "背景色:"
+	},
+	"options_color.preview": {
+		"message": "プレビュー",
+		"description": "Text used to preview the colors for the from highlighting"
 	},
 	"options_color.success": {
 		"message": "有効な署名"
@@ -623,14 +633,72 @@
 	"dkim_verifier.reverifyDKIMSignature": {
 		"message": "DKIM 署名を再検証"
 	},
+	"dkim_verifier.reverifyDKIMSignature.tooltip": {
+		"message": "表示されているメールの新しい検証を開始します。検証結果の保存が有効になっている場合、保存されている結果が更新されます。"
+	},
 	"dkim_verifier.policyAddUserException": {
 		"message": "署名必須の例外を追加"
+	},
+	"dkim_verifier.policyAddUserException.tooltip": {
+		"message": "From アドレスからのメールが署名されていなくてもよいという署名ルールを追加します。新しい検証も開始されます。"
 	},
 	"dkim_verifier.markKeyAsSecure": {
 		"message": "DKIM キーをセキュアとマーク"
 	},
+	"dkim_verifier.markKeyAsSecure.tooltip": {
+		"message": "キャッシュされた最初の DKIM 結果の DKIM キーを DNSSEC によりセキュアであるとマークします。新しい検証も開始されます。"
+	},
 	"dkim_verifier.updateKey": {
 		"message": "DKIM キーを更新"
+	},
+	"dkim_verifier.updateKey.tooltip": {
+		"message": "このメールで使用されているキャッシュされた DKIM キーを再度 DNS から取得して更新します。新しい検証も開始されます。"
+	},
+	"button.options": {
+		"message": "オプション",
+		"description": "Button to open the options page of the Add-on."
+	},
+	"button.options.tooltip": {
+		"message": "新しいタブでアドオンのオプションを開きます。"
+	},
+	"details.result": {
+		"message": "結果",
+		"description": "Detailed view row name for the overall DKIM result."
+	},
+	"details.warnings": {
+		"message": "警告",
+		"description": "Detailed view row name for the warnings of the DKIM signature."
+	},
+	"details.SDID": {
+		"message": "SDID",
+		"description": "Detailed view row name for the SDID."
+	},
+	"details.AUID": {
+		"message": "AUID",
+		"description": "Detailed view row name for the AUID."
+	},
+	"details.signDate": {
+		"message": "署名日",
+		"description": "Detailed view row name for the date (including time) the signature was created."
+	},
+	"details.expirationDate": {
+		"message": "有効期限",
+		"description": "Detailed view row name for the date (including time) the signature expires."
+	},
+	"details.algorithm": {
+		"message": "アルゴリズム",
+		"description": "Detailed view row name for the algorithm used in the signature."
+	},
+	"details.signedHeaders": {
+		"message": "署名ヘッダ",
+		"description": "Detailed view row name for the message headers signed by DKIM."
+	},
+	"details.noDate": {
+		"message": "署名に時刻が含まれていません",
+		"description": "Value shown for sign and expiration date if no date is given in the signature."
+	},
+	"details.potentiallyOutdatedKeyWarning": {
+		"message": "DKIM キーのキャッシュが有効です。無効な署名の原因は古いキーである可能性があります。\"$1\" アクションを試してキーを更新し、新しい検証を開始してください。"
 	},
 	// ==================== Table Views ====================
 	"treeviewKeys.title": {

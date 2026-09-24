@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020-2022 Philippe Lieser
+ * Copyright (c) 2020-2022;2025 Philippe Lieser
  *
  * This software is licensed under the terms of the MIT License.
  *
@@ -8,7 +8,6 @@
  */
 
 // @ts-check
-/* eslint-env webextensions */
 
 import { addrIsInDomain, domainIsInDomain } from "../utils.mjs.js";
 import ExtensionUtils from "../extensionUtils.mjs.js";
@@ -40,17 +39,13 @@ export async function getFavicon(sdid, auid, from) {
 			url = favicons[baseDomain];
 		}
 	}
-	if (!url) {
-		// Check if enabled for AUID.
-		if (auid) {
-			url = favicons[auid.toLowerCase()];
-		}
+	// If no favicon found yet, check if enabled for AUID.
+	if (!url && auid) {
+		url = favicons[auid.toLowerCase()];
 	}
-	if (!url) {
-		// Check if enabled for from.
-		if (from && addrIsInDomain(from, sdid)) {
-			url = favicons[from.toLowerCase()];
-		}
+	// If no favicon found yet, check if enabled for from.
+	if (!url && from && addrIsInDomain(from, sdid)) {
+		url = favicons[from.toLowerCase()];
 	}
 
 	if (url) {

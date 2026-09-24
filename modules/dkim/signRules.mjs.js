@@ -1,7 +1,7 @@
 /**
  * Check DKIM signing rules.
  *
- * Copyright (c) 2013-2018;2020-2023 Philippe Lieser
+ * Copyright (c) 2013-2018;2020-2023;2025-2026 Philippe Lieser
  *
  * This software is licensed under the terms of the MIT License.
  *
@@ -10,13 +10,13 @@
  */
 
 // @ts-check
+/* eslint-disable jsdoc/reject-any-type */
 ///<reference path="../../RuntimeMessage.d.ts" />
-///<reference path="../../experiments/mailUtils.d.ts" />
-/* eslint-env webextensions */
 
 import { Deferred, addrIsInDomain, copy, stringEndsWith, stringEqual } from "../utils.mjs.js";
 import ExtensionUtils from "../extensionUtils.mjs.js";
 import Logging from "../logging.mjs.js";
+import getBaseDomainFromAddr from "../publicSuffixList.mjs";
 import prefs from "../preferences.mjs.js";
 
 const log = Logging.getLogger("SignRules");
@@ -39,7 +39,6 @@ const log = Logging.getLogger("SignRules");
  * @public
  * @enum {number}
  */
-// eslint-disable-next-line no-extra-parens
 const RULE_TYPE = /** @type {const} */ ({
 	ALL: 1, // all e-mails must be signed
 	NEUTRAL: 2,
@@ -52,7 +51,6 @@ const RULE_TYPE = /** @type {const} */ ({
  * @public
  * @enum {number}
  */
-// eslint-disable-next-line no-extra-parens
 const PRIORITY = /** @type {const} */ ({
 	AUTOINSERT_RULE_ALL: 1100,
 	DEFAULT_RULE_ALL0: 2000, // used for e-mail providers
@@ -65,7 +63,6 @@ const PRIORITY = /** @type {const} */ ({
 });
 
 /** @enum {number} */
-// eslint-disable-next-line no-extra-parens
 const AUTO_ADD_RULE_FOR = /** @type {const} */ ({
 	FROM_ADDRESS: 0,
 	SUB_DOMAIN: 1,
@@ -223,9 +220,9 @@ async function storeUserRules() {
  */
 function glob(str, pattern) {
 	// escape all special regex charters besides *
-	let regexpPattern = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+	let regexpPattern = pattern.replaceAll(/[.+?^${}()|[\]\\]/g, String.raw`\$&`);
 	// replace * with correct regex
-	regexpPattern = regexpPattern.replace("*", ".*");
+	regexpPattern = regexpPattern.replaceAll("*", ".*");
 
 	const regexp = new RegExp(`^${regexpPattern}$`, "i");
 	return regexp.test(str);
@@ -262,7 +259,7 @@ async function checkIfShouldBeSigned(fromAddress, listId, dmarc) {
 	});
 	if (prefs["policy.signRules.checkDefaultRules"]) {
 		await loadDefaultRules();
-		matchedRules = matchedRules.concat(defaultRules.filter(rule => {
+		matchedRules = [...matchedRules, ...defaultRules.filter(rule => {
 			if (!addrIsInDomain(fromAddress, rule.domain)) {
 				return false;
 			}
@@ -270,10 +267,10 @@ async function checkIfShouldBeSigned(fromAddress, listId, dmarc) {
 				return false;
 			}
 			return true;
-		}));
+		})];
 	}
 	/** @type {DkimSignRuleDefault|DkimSignRuleUser|undefined} */
-	const rule = matchedRules.sort((a, b) => b.priority - a.priority)[0];
+	const rule = matchedRules.toSorted((a, b) => b.priority - a.priority)[0];
 	if (!rule) {
 		if (dmarc) {
 			const dmarcRes = await dmarc.shouldBeSigned(fromAddress);
@@ -295,24 +292,28 @@ async function checkIfShouldBeSigned(fromAddress, listId, dmarc) {
 	let shouldBeSigned;
 	let hideFail;
 	switch (rule.type) {
-		case RULE_TYPE.ALL:
+		case RULE_TYPE.ALL: {
 			shouldBeSigned = true;
 			hideFail = false;
 			break;
-		case RULE_TYPE.NEUTRAL:
+		}
+		case RULE_TYPE.NEUTRAL: {
 			shouldBeSigned = false;
 			hideFail = false;
 			break;
-		case RULE_TYPE.HIDEFAIL:
+		}
+		case RULE_TYPE.HIDEFAIL: {
 			shouldBeSigned = false;
 			hideFail = true;
 			break;
-		default:
+		}
+		default: {
 			throw new Error(`unknown rule type ${rule.type}`);
+		}
 	}
 	return {
 		shouldBeSigned,
-		sdid: rule.sdid.split(" ").filter(x => x),
+		sdid: rule.sdid.split(" ").filter(Boolean),
 		foundRule: true,
 		hideFail,
 	};
@@ -344,8 +345,7 @@ function checkSDID(dkimResult, allowedSDIDs) {
 	// Remove potential warning that address is not in SDID or AUID,
 	// as the allowed SDIDs are explicitly stated via the sign rules
 	result.warnings = result.warnings.filter(warning => {
-		return warning.name !== "DKIM_SIGWARNING_FROM_NOT_IN_SDID" &&
-			warning.name !== "DKIM_SIGWARNING_FROM_NOT_IN_AUID";
+		return warning.name !== "DKIM_SIGWARNING_FROM_NOT_IN_SDID";
 	});
 
 	// error/warning if there is a SDID in the sign rule
@@ -361,12 +361,10 @@ function checkSDID(dkimResult, allowedSDIDs) {
 				{ name: "DKIM_POLICYERROR_WRONG_SDID", params: [allowedSDIDs] });
 			log.debug("Warning: DKIM_POLICYERROR_WRONG_SDID");
 		} else {
-			return {
-				version: "2.0",
-				result: "PERMFAIL",
-				errorType: "DKIM_POLICYERROR_WRONG_SDID",
-				errorStrParams: allowedSDIDs,
-			};
+			result.result = "PERMFAIL";
+			result.errorType = "DKIM_POLICYERROR_WRONG_SDID";
+			result.errorStrParams = allowedSDIDs;
+			result.warnings = [];
 		}
 	}
 
@@ -402,7 +400,10 @@ export default class SignRules {
 	static async exportUserRules() {
 		/** @type {{id?: number, domain: string, listId: string, addr: string, sdid: string, type: number, priority: number, enabled: boolean }[]} */
 		const rules = copy(await this.getUserRules());
-		rules.map(rule => { delete rule.id; return rule; });
+		rules.map(rule => {
+			delete rule.id;
+			return rule;
+		});
 		return {
 			dataId: "DkimExportedUserSignRules",
 			dataFormatVersion: 1,
@@ -436,7 +437,7 @@ export default class SignRules {
 			maxId = 0;
 			userRules = [];
 		}
-		userRules = userRules.concat(exportedRules.rules.map(rule => ({ id: ++maxId, ...rule })));
+		userRules = [...userRules, ...exportedRules.rules.map(rule => ({ id: ++maxId, ...rule }))];
 		userRulesMaxId = maxId;
 
 		await storeUserRules();
@@ -510,10 +511,9 @@ export default class SignRules {
 	static async addRule(domain, listId, addr, sdid, type, priority = null, enabled = true) {
 		let ruleDomain = domain;
 		if (!ruleDomain && !listId) {
-			ruleDomain = await browser.mailUtils.getBaseDomainFromAddr(addr);
+			ruleDomain = getBaseDomainFromAddr(addr);
 		}
 
-		// eslint-disable-next-line no-extra-parens
 		if (!Object.values(/** @type {{[key: string]: number}} */(RULE_TYPE)).includes(type)) {
 			throw new Error(`unknown rule type ${type}`);
 		}
@@ -521,17 +521,21 @@ export default class SignRules {
 		let rulePriority = priority;
 		if (rulePriority === null) {
 			switch (type) {
-				case RULE_TYPE.ALL:
+				case RULE_TYPE.ALL: {
 					rulePriority = PRIORITY.USERINSERT_RULE_ALL;
 					break;
-				case RULE_TYPE.NEUTRAL:
+				}
+				case RULE_TYPE.NEUTRAL: {
 					rulePriority = PRIORITY.USERINSERT_RULE_NEUTRAL;
 					break;
-				case RULE_TYPE.HIDEFAIL:
+				}
+				case RULE_TYPE.HIDEFAIL: {
 					rulePriority = PRIORITY.USERINSERT_RULE_HIDEFAIL;
 					break;
-				default:
+				}
+				default: {
 					throw new Error(`unknown rule type ${type}`);
+				}
 			}
 		}
 
@@ -602,27 +606,31 @@ export default class SignRules {
 			case "domain":
 			case "listId":
 			case "addr":
-			case "sdid":
+			case "sdid": {
 				if (typeof newValue !== "string") {
-					throw new Error(`Can not set ${propertyName} to value '${newValue}' with type ${typeof newValue}`);
+					throw new TypeError(`Can not set ${propertyName} to value '${newValue}' with type ${typeof newValue}`);
 				}
 				userRule[propertyName] = newValue;
 				break;
+			}
 			case "type":
-			case "priority":
+			case "priority": {
 				if (typeof newValue !== "number") {
-					throw new Error(`Can not set ${propertyName} to value '${newValue}' with type ${typeof newValue}`);
+					throw new TypeError(`Can not set ${propertyName} to value '${newValue}' with type ${typeof newValue}`);
 				}
 				userRule[propertyName] = newValue;
 				break;
-			case "enabled":
+			}
+			case "enabled": {
 				if (typeof newValue !== "boolean") {
-					throw new Error(`Can not set domain to value '${newValue}' with type ${typeof newValue}`);
+					throw new TypeError(`Can not set domain to value '${newValue}' with type ${typeof newValue}`);
 				}
 				userRule[propertyName] = newValue;
 				break;
-			default:
+			}
+			default: {
 				throw new Error(`Can not update unknown property '${propertyName}'`);
+			}
 		}
 		return storeUserRules();
 	}
@@ -676,25 +684,29 @@ export default class SignRules {
 				let fromAddressToAdd;
 
 				switch (prefs["policy.signRules.autoAddRule.for"]) {
-					case AUTO_ADD_RULE_FOR.FROM_ADDRESS:
+					case AUTO_ADD_RULE_FOR.FROM_ADDRESS: {
 						fromAddressToAdd = fromAddress;
 						break;
-					case AUTO_ADD_RULE_FOR.SUB_DOMAIN:
-						fromAddressToAdd = `*${fromAddress.substr(fromAddress.lastIndexOf("@"))}`;
+					}
+					case AUTO_ADD_RULE_FOR.SUB_DOMAIN: {
+						fromAddressToAdd = `*${fromAddress.slice(fromAddress.lastIndexOf("@"))}`;
 						break;
-					case AUTO_ADD_RULE_FOR.BASE_DOMAIN:
-						domain = await browser.mailUtils.getBaseDomainFromAddr(fromAddress);
+					}
+					case AUTO_ADD_RULE_FOR.BASE_DOMAIN: {
+						domain = getBaseDomainFromAddr(fromAddress);
 						fromAddressToAdd = "*";
 						break;
-					default:
+					}
+					default: {
 						throw new Error("invalid signRules.autoAddRule.for");
+					}
 				}
 				await SignRules.addRule(domain, null, fromAddressToAdd, sdid, RULE_TYPE.ALL, PRIORITY.AUTOINSERT_RULE_ALL);
 			}
 		})();
-		promise.then(null, (exception) => {
+		promise.then(null, (error) => {
 			// Failure!  We can inspect or report the exception.
-			log.fatal("Error adding an automatic rule:", exception);
+			log.fatal("Error adding an automatic rule:", error);
 		});
 		return promise;
 	}

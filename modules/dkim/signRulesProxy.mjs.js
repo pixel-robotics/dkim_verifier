@@ -11,8 +11,8 @@
  */
 
 // @ts-check
+/* eslint-disable jsdoc/reject-any-type */
 ///<reference path="../../RuntimeMessage.d.ts" />
-/* eslint-env webextensions */
 
 export default class SignRulesProxy {
 	/**
@@ -22,7 +22,7 @@ export default class SignRulesProxy {
 		/** @type {RuntimeMessage.SignRules.getDefaultRules} */
 		const message = {
 			module: "SignRules",
-			method: "getDefaultRules"
+			method: "getDefaultRules",
 		};
 		return browser.runtime.sendMessage(message);
 	}
@@ -34,7 +34,7 @@ export default class SignRulesProxy {
 		/** @type {RuntimeMessage.SignRules.getUserRules} */
 		const message = {
 			module: "SignRules",
-			method: "getUserRules"
+			method: "getUserRules",
 		};
 		return browser.runtime.sendMessage(message);
 	}

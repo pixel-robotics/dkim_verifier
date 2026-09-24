@@ -1,9 +1,10 @@
 /**
- * Wrapper to resolve DNS lookups via the following experiment libraries:
- *  - JSDNS
- *  - libunbound
+ * Wrapper to resolve DNS lookups via the following resolvers:
+ *  - JSDNS (experiment library)
+ *  - libunbound (experiment library)
+ *  - DNS over HTTPS (DoH)
  *
- * Copyright (c) 2020-2023 Philippe Lieser
+ * Copyright (c) 2020-2023;2025-2026 Philippe Lieser
  *
  * This software is licensed under the terms of the MIT License.
  *
@@ -14,11 +15,12 @@
 // @ts-check
 ///<reference path="../experiments/jsdns.d.ts" />
 ///<reference path="../experiments/libunbound.d.ts" />
-/* eslint-env webextensions, browser */
+/* global addEventListener */
 
 import { DKIM_TempError } from "./error.mjs.js";
-import Logging from "../modules/logging.mjs.js";
-import prefs from "../modules/preferences.mjs.js";
+import Logging from "./logging.mjs.js";
+import dohTxt from "./doh.mjs";
+import prefs from "./preferences.mjs.js";
 
 const log = Logging.getLogger("dns");
 
@@ -34,6 +36,7 @@ const log = Logging.getLogger("dns");
 
 const RESOLVER_JSDNS = 1;
 const RESOLVER_LIBUNBOUND = 2;
+const RESOLVER_DOH = 3;
 
 /** @type {Promise<void>?} */
 let jsdnsIsConfigured = null;
@@ -70,7 +73,7 @@ function addListeners() {
 		if (Object.keys(changes).some(name => name.startsWith("dns."))) {
 			resetDNSConfiguration();
 		}
-		if (Object.keys(changes).some(name => name === "debug")) {
+		if (Object.keys(changes).includes("debug")) {
 			resetDNSConfiguration();
 		}
 	});
@@ -142,7 +145,6 @@ function checkOnlineStatus() {
 
 export default class DNS {
 	static get RCODE() {
-		// eslint-disable-next-line no-extra-parens
 		return /** @type {const} */ ({
 			NoError: 0, // No Error [RFC1035]
 			FormErr: 1, // Format Error [RFC1035]
@@ -177,8 +179,30 @@ export default class DNS {
 				checkOnlineStatus();
 				return browser.libunbound.txt(name);
 			}
-			default:
+			case RESOLVER_DOH: {
+				checkOnlineStatus();
+				return dohTxt(name);
+			}
+			default: {
 				throw new Error("invalid resolver preference");
+			}
+		}
+	}
+
+	/**
+	 * Throws error on bogus result or if result contains a DNS error.
+	 *
+	 * @param {DnsTxtResult} dnsResult
+	 * @throws {DKIM_SigError}
+	 * @throws {DKIM_TempError}
+	 */
+	static checkForErrors(dnsResult) {
+		if (dnsResult.bogus) {
+			throw new DKIM_TempError("DKIM_DNSERROR_DNSSEC_BOGUS");
+		}
+		if (dnsResult.rcode !== DNS.RCODE.NoError && dnsResult.rcode !== DNS.RCODE.NXDomain) {
+			log.info("DNS query failed with result:", dnsResult);
+			throw new DKIM_TempError("DKIM_DNSERROR_SERVER_ERROR");
 		}
 	}
 }

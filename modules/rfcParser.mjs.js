@@ -1,7 +1,7 @@
 /**
  * RegExp pattern for ABNF definitions in various RFCs.
  *
- * Copyright (c) 2020-2023 Philippe Lieser
+ * Copyright (c) 2020-2025 Philippe Lieser
  *
  * This software is licensed under the terms of the MIT License.
  *
@@ -11,13 +11,14 @@
 
 // @ts-check
 /* eslint-disable camelcase */
+/* eslint-disable unicorn/no-hex-escape */
 
 import { DKIM_Error, DKIM_SigError } from "./error.mjs.js";
 
 export default class RfcParser {
 	////// RFC 2045 - Multipurpose Internet Mail Extensions (MIME) Part One: Format of Internet Message Bodies
 	//// 5.1.  Syntax of the Content-Type Header Field
-	static get token() { return "[^ \\x00-\\x1F\\x7F()<>@,;:\\\\\"/[\\]?=\\u0080-\\uFFFF]+"; }
+	static get token() { return String.raw`[^ \x00-\x1F\x7F()<>@,;:\\"/[\]?=\u0080-\uFFFF]+`; }
 
 	////// RFC 5234 - Augmented BNF for Syntax Specifications: ABNF
 	//// Appendix B.1.  Core Rules
@@ -34,7 +35,7 @@ export default class RfcParser {
 	////// RFC 5322 - Internet Message Format
 	//// 3.2.1.  Quoted characters
 	// Note: this is incomplete (obs-qp is missing)
-	static get quoted_pair() { return `(?:\\\\(?:${this.VCHAR}|${this.WSP}))`; }
+	static get quoted_pair() { return String.raw`(?:\\(?:${this.VCHAR}|${this.WSP}))`; }
 	//// 3.2.2.  Folding White Space and Comments
 	// Note: this is incomplete (obs-FWS is missing)
 	// Note: this is as specified in Section 2.8. of RFC 6376 [DKIM]
@@ -42,10 +43,15 @@ export default class RfcParser {
 	// Note: helper only, not part of the RFC
 	static get FWS_op() { return `${this.FWS}?`; }
 	// Note: this is incomplete (obs-ctext is missing)
-	static get ctext() { return "[!-'*-[\\]-~]"; }
-	// Note: this is incomplete (comment is missing)
-	static get ccontent() { return `(?:${this.ctext}|${this.quoted_pair})`; }
-	static get comment() { return `\\((?:${this.FWS_op}${this.ccontent})*${this.FWS_op}\\)`; }
+	static get ctext() { return String.raw`[!-'*-[\]-~]`; }
+	// Note: There is a recursion in ccontent/comment, which is not supported by the RegExp in JavaScript.
+	// We currently unroll it to support a depth of up to 3 comments.
+	static get ccontent_2() { return `(?:${this.ctext}|${this.quoted_pair})`; }
+	static get comment_2() { return String.raw`\((?:${this.FWS_op}${this.ccontent_2})*${this.FWS_op}\)`; }
+	static get ccontent_1() { return `(?:${this.ctext}|${this.quoted_pair}|${this.comment_2})`; }
+	static get comment_1() { return String.raw`\((?:${this.FWS_op}${this.ccontent_1})*${this.FWS_op}\)`; }
+	static get ccontent() { return `(?:${this.ctext}|${this.quoted_pair}|${this.comment_1})`; }
+	static get comment() { return String.raw`\((?:${this.FWS_op}${this.ccontent})*${this.FWS_op}\)`; }
 	static get CFWS() { return `(?:(?:(?:${this.FWS_op}${this.comment})+${this.FWS_op})|${this.FWS})`; }
 	// Note: helper only, not part of the RFC
 	static get CFWS_op() { return `${this.CFWS}?`; }
@@ -53,12 +59,12 @@ export default class RfcParser {
 	static get atext() { return "[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]"; }
 	static get atom() { return `(?:${this.CFWS_op}${this.atext}+${this.CFWS_op})`; }
 	// Note: helper only, not part of the RFC: an atom without the optional surrounding CFWS. dot is included for obs-phrase
-	static get atom_b_obs() { return `(?:(?:${this.atext}|\\.)+)`; }
-	static get dot_atom_text() { return `(?:${this.atext}+(?:\\.${this.atext}+)*)`; }
+	static get atom_b_obs() { return String.raw`(?:(?:${this.atext}|\.)+)`; }
+	static get dot_atom_text() { return String.raw`(?:${this.atext}+(?:\.${this.atext}+)*)`; }
 	static get dot_atom() { return `(?:${this.CFWS_op}${this.dot_atom_text}${this.CFWS_op})`; }
 	//// 3.2.4.  Quoted Strings
 	// Note: this is incomplete (obs-qtext is missing)
-	static get qtext() { return "[!#-[\\]-~]"; }
+	static get qtext() { return String.raw`[!#-[\]-~]`; }
 	static get qcontent() { return `(?:${this.qtext}|${this.quoted_pair})`; }
 	static get quoted_string() { return `(?:${this.CFWS_op}"(?:${this.FWS_op}${this.qcontent})*${this.FWS_op}"${this.CFWS_op})`; }
 	//// 3.2.5.  Miscellaneous Tokens
@@ -82,7 +88,7 @@ export default class RfcParser {
 
 	////// RFC 6376 - DomainKeys Identified Mail (DKIM) Signatures
 	//// 3.5.  The DKIM-Signature Header Field
-	static get domain_name() { return `(?:${this.sub_domain}(?:\\.${this.sub_domain})+)`; }
+	static get domain_name() { return String.raw`(?:${this.sub_domain}(?:\.${this.sub_domain})+)`; }
 
 	/** @readonly */
 	static TAG_PARSE_ERROR = {
@@ -108,8 +114,8 @@ export default class RfcParser {
 
 		// delete optional semicolon at end
 		let listStr = str;
-		if (listStr.charAt(listStr.length - 1) === ";") {
-			listStr = listStr.substr(0, listStr.length - 1);
+		if (listStr.at(-1) === ";") {
+			listStr = listStr.slice(0, -1);
 		}
 
 		const array = listStr.split(";");

@@ -1,3 +1,5 @@
 node_modules/
 
+*.xpi
 *.zip
+!releases/*.xpi

@@ -1,0 +1,430 @@
+import { defineConfig, globalIgnores } from "eslint/config";
+import css from "@eslint/css";
+import eslintPluginUnicorn from "eslint-plugin-unicorn";
+import globals from "globals";
+import html from "@html-eslint/eslint-plugin";
+// Currently not compatible with ESlint 10 https://github.com/import-js/eslint-plugin-import/issues/3227
+// import importPlugin from "eslint-plugin-import";
+import js from "@eslint/js";
+import jsdoc from "eslint-plugin-jsdoc";
+import json from "@eslint/json";
+import mocha from "eslint-plugin-mocha";
+// Requires microsoft/eslint-plugin-sdl, which is not compatible with ESLint 10 (https://github.com/microsoft/eslint-plugin-sdl/issues/92).
+// import mozilla from "eslint-plugin-mozilla";
+import stylistic from "@stylistic/eslint-plugin";
+
+
+export default defineConfig([
+	globalIgnores(["thirdparty/"]),
+	{
+		name: "Stylistic plugin",
+		files: ["**/*.js", "**/*.mjs"],
+		...stylistic.configs.customize({
+			braceStyle: "1tbs",
+			indent: "tab",
+			semi: true,
+		}),
+	}, {
+		name: "Default JS",
+		files: ["**/*.js", "**/*.mjs"],
+		plugins: {
+			"@stylistic": stylistic,
+			js,
+			jsdoc,
+			mocha,
+			// mozilla,
+			"unicorn": eslintPluginUnicorn,
+		},
+		extends: [
+			"js/recommended",
+			"jsdoc/recommended-typescript-flavor",
+			"unicorn/recommended",
+		],
+
+		languageOptions: {
+			ecmaVersion: 2024,
+			sourceType: "module",
+
+			globals: {
+				globalThis: "readonly",
+			},
+
+			parserOptions: {
+				ecmaFeatures: {},
+			},
+		},
+
+		linterOptions: {
+			reportUnusedInlineConfigs: "warn",
+		},
+
+		rules: {
+			// Possible Problems
+			"array-callback-return": "warn",
+			"no-constant-binary-expression": "warn",
+			"no-constructor-return": "warn",
+			"no-duplicate-imports": "warn",
+			"no-new-native-nonconstructor": "warn",
+			"no-promise-executor-return": "warn",
+			"no-self-compare": "warn",
+			"no-template-curly-in-string": "warn",
+			"no-unmodified-loop-condition": "warn",
+			"no-unreachable-loop": "warn",
+			"no-unused-private-class-members": "warn",
+			"no-unused-vars": ["error", {
+				argsIgnorePattern: "^_",
+			}],
+			"no-use-before-define": "error",
+			"require-atomic-updates": "warn",
+
+			// Suggestions
+			"block-scoped-var": "warn",
+			"camelcase": ["warn", {
+				allow: [
+					"DKIM_Error",
+					"DKIM_SigError",
+					"DKIM_TempError",
+				],
+			}],
+			"complexity": "warn",
+			"consistent-return": "warn",
+			"curly": "warn",
+			"default-case": "warn",
+			"default-case-last": "warn",
+			"default-param-last": "warn",
+			"dot-notation": "warn",
+			"eqeqeq": "warn",
+			"grouped-accessor-pairs": "warn",
+			"guard-for-in": "warn",
+			"logical-assignment-operators": "error",
+			"no-alert": "error",
+			"no-array-constructor": "error",
+			"no-caller": "warn",
+			"no-div-regex": "warn",
+			"no-else-return": "warn",
+			"no-empty-function": "warn",
+			"no-eq-null": "warn",
+			"no-eval": "error",
+			"no-extend-native": "warn",
+			"no-extra-bind": "warn",
+			"no-extra-label": "warn",
+			"no-implicit-coercion": "warn",
+			"no-implied-eval": "error",
+			"no-invalid-this": "warn",
+			"no-iterator": "warn",
+			"no-label-var": "warn",
+			"no-labels": "warn",
+			"no-lone-blocks": "warn",
+			"no-loop-func": "warn",
+			"no-magic-numbers": ["warn", {
+				ignoreArrayIndexes: true,
+				ignore: [-1, 0, 1, 2, 3],
+			}],
+			"no-multi-assign": "warn",
+			"no-multi-str": "warn",
+			"no-nested-ternary": "warn",
+			"no-new": "warn",
+			"no-new-func": "warn",
+			"no-new-wrappers": "warn",
+			"no-object-constructor": "warn",
+			"no-octal-escape": "warn",
+			"no-param-reassign": "warn",
+			"no-proto": "warn",
+			"no-return-assign": "warn",
+			"no-script-url": "warn",
+			"no-sequences": "warn",
+			"no-shadow": "warn",
+			"no-throw-literal": "warn",
+			"no-undef-init": "warn",
+			"no-unneeded-ternary": "warn",
+			"no-unused-expressions": "warn",
+			"no-useless-call": "warn",
+			"no-useless-computed-key": "warn",
+			"no-useless-concat": "warn",
+			"no-useless-constructor": "warn",
+			"no-useless-return": "warn",
+			"no-var": "warn",
+			"no-void": "warn",
+			"no-warning-comments": process.env.CI === "true" ? "off" : "warn",
+			"object-shorthand": "warn",
+			"one-var": ["warn", "never"],
+			"operator-assignment": "warn",
+			"prefer-const": "warn",
+			"prefer-exponentiation-operator": "warn",
+			"prefer-numeric-literals": "warn",
+			"prefer-object-has-own": "warn",
+			"prefer-object-spread": "warn",
+			"prefer-promise-reject-errors": "warn",
+			"prefer-rest-params": "warn",
+			"prefer-spread": "warn",
+			"prefer-template": "warn",
+			"radix": "warn",
+			"require-await": "warn",
+			"sort-imports": "warn",
+			"strict": ["warn", "global"],
+			"yoda": "warn",
+
+			// Stylistic
+			"@stylistic/arrow-parens": "off",
+			"@stylistic/comma-dangle": ["warn", {
+				arrays: "always-multiline",
+				objects: "always-multiline",
+				imports: "always-multiline",
+				exports: "always-multiline",
+				functions: "only-multiline",
+				importAttributes: "always-multiline",
+				dynamicImports: "always-multiline",
+			}],
+			"@stylistic/dot-location": ["warn", "object"],
+			"@stylistic/function-call-spacing": "warn",
+			"@stylistic/indent": ["error", "tab", {
+				SwitchCase: 1,
+				tabLength: 4,
+			}],
+			"@stylistic/linebreak-style": "error",
+			"@stylistic/max-statements-per-line": ["warn", { max: 2 }],
+			"@stylistic/no-confusing-arrow": "warn",
+			"@stylistic/no-extra-parens": ["warn", "all", {
+				allowParensAfterCommentPattern: "@type",
+				nestedBinaryExpressions: false,
+			}],
+			"@stylistic/no-extra-semi": "warn",
+			"@stylistic/no-multiple-empty-lines": ["warn", { max: 2, maxBOF: 0, maxEOF: 0 }],
+			"@stylistic/object-property-newline": ["warn", { allowAllPropertiesOnSameLine: true }],
+			"@stylistic/one-var-declaration-per-line": ["warn", "always"],
+			"@stylistic/operator-linebreak": ["warn", "after", { overrides: { "?": "before", ":": "before" } }],
+			"@stylistic/quotes": ["warn", "double", {
+				avoidEscape: true,
+			}],
+			"@stylistic/semi-style": "warn",
+			"@stylistic/spaced-comment": ["warn", "always", {
+				block: {
+					balanced: false,
+					markers: [","],
+				},
+				line: {
+					exceptions: ["/"],
+					markers: ["//", "////", "/<reference", "#region", "#endregion"],
+				},
+			}],
+			"@stylistic/switch-colon-spacing": "warn",
+
+			// JSDoc
+			"jsdoc/check-line-alignment": "warn",
+			"jsdoc/check-syntax": "warn",
+			"jsdoc/match-description": "warn",
+			"jsdoc/no-bad-blocks": "warn",
+			"jsdoc/no-defaults": "warn",
+			"jsdoc/require-asterisk-prefix": "warn",
+			"jsdoc/require-hyphen-before-param-description": "warn",
+			"jsdoc/require-param-description": "off",
+			"jsdoc/require-property-description": "off",
+			"jsdoc/require-returns": ["warn", {
+				checkGetters: false,
+			}],
+			"jsdoc/require-returns-description": "off",
+			"jsdoc/tag-lines": ["warn", "never", {
+				startLines: 1,
+			}],
+
+			// Mocha
+			"mocha/no-return-from-async": "warn",
+			"mocha/prefer-arrow-callback": "warn",
+
+			// Unicorn
+			"unicorn/empty-brace-spaces": "off",
+			"unicorn/filename-case": ["error", { case: "camelCase", ignore: ["JSDNS.mjs", "update-thirdparty.js"] }],
+			"unicorn/no-await-expression-member": "off",
+			"unicorn/no-null": "off",
+			"unicorn/no-static-only-class": "off",
+			"unicorn/no-useless-undefined": "off",
+			"unicorn/prefer-query-selector": "off",
+			"unicorn/prevent-abbreviations": "off",
+
+			// Mozilla
+			/*
+			"mozilla/avoid-removeChild": "warn",
+			"mozilla/consistent-if-bracing": "warn",
+			"mozilla/no-compare-against-boolean-literals": "warn",
+			"mozilla/no-useless-removeEventListener": "warn",
+			"mozilla/prefer-formatValues": "warn",
+			"mozilla/use-includes-instead-of-indexOf": "warn",
+			"mozilla/use-ownerGlobal": "warn",
+			"mozilla/use-returnValue": "warn",
+			*/
+		},
+	}, {
+		name: "Content JS",
+		files: ["content/**/*.js", "content/**/*.mjs"],
+		languageOptions: {
+			globals: {
+				...globals.browser,
+				...globals.webextensions,
+			},
+		},
+	}, {
+		name: "Experiments JS",
+		files: ["experiments/**/*.js", "experiments/**/*.mjs"],
+		plugins: {
+			// mozilla,
+		},
+		languageOptions: {
+			globals: {
+				// ...mozilla.environments.privileged.globals,
+				// ...mozilla.environments.specific.globals,
+				Cc: "readonly",
+				ChromeUtils: "readonly",
+				ChromeWorker: "readonly",
+				Ci: "readonly",
+				console: "readonly",
+				Cr: "readonly",
+				dump: "readonly",
+				PathUtils: "readonly",
+				Services: "readonly",
+			},
+		},
+		rules: {
+			"unicorn/prefer-module": "off",
+
+			/*
+			"mozilla/no-define-cc-etc": "warn",
+			"mozilla/no-throw-cr-literal": "warn",
+			"mozilla/no-useless-parameters": "warn",
+			"mozilla/reject-chromeutils-import-params": "warn",
+			"mozilla/reject-importGlobalProperties": [
+				"warn",
+				"allownonwebidl",
+			],
+			"mozilla/rejects-requires-await": "warn",
+			"mozilla/use-cc-etc": "warn",
+			"mozilla/use-chromeutils-generateqi": "warn",
+			"mozilla/use-chromeutils-import": "warn",
+			"mozilla/use-default-preference-values": "warn",
+			"mozilla/use-services": "warn",
+			*/
+		},
+	}, {
+		name: "Experiments JS (script files)",
+		files: ["experiments/**/*.js"],
+		languageOptions: {
+			sourceType: "script",
+		},
+	}, {
+		name: "JS modules",
+		files: ["modules/**/*.js", "modules/**/*.mjs"],
+		languageOptions: {
+			globals: {
+				...globals["shared-node-browser"],
+				...globals.webextensions,
+			},
+		},
+	}, {
+		name: "Node scripts",
+		files: ["scripts/**/*.js", "scripts/**/*.mjs"],
+		languageOptions: {
+			globals: {
+				...globals.node,
+			},
+		},
+	}, {
+		name: "Test helper",
+		files: ["test/helpers/**/*.js", "test/helpers/**/*.mjs"],
+		languageOptions: {
+			globals: {
+				...globals.mocha,
+				...globals["shared-node-browser"],
+			},
+		},
+	}, {
+		name: "Unittest",
+		files: ["test/unittest/**/*.js", "test/unittest/**/*.mjs"],
+		plugins: {
+			mocha,
+		},
+		extends: [
+			"mocha/recommended",
+		],
+		languageOptions: {
+			globals: {
+				...globals["shared-node-browser"],
+				...globals.webextensions,
+			},
+		},
+		rules: {
+			"no-magic-numbers": "off",
+			"no-unused-expressions": "off",
+
+			"unicorn/consistent-function-scoping": "off",
+		},
+	}, {
+		name: "ESLint config",
+		files: ["eslint.config.mjs"],
+		languageOptions: {
+			globals: {
+				...globals.node,
+			},
+		},
+	}, {
+		files: ["**/*.json"],
+		ignores: ["package-lock.json"],
+		language: "json/json",
+		...json.configs.recommended,
+	}, {
+		name: "JSONC",
+		files: [
+			".vscode/**/*.json",
+			"_locales/**/*.json",
+			"jsconfig.json",
+		],
+		language: "json/jsonc",
+	}, {
+		name: "JSON with tailing commas",
+		files: [
+			".vscode/**/*.json",
+			"jsconfig.json",
+		],
+		languageOptions: {
+			allowTrailingCommas: true,
+		},
+	}, {
+		name: "HTML",
+		files: ["**/*.html"],
+		language: "html/html",
+		plugins: { html },
+		extends: ["html/recommended"],
+		rules: {
+			// Best Practice
+			"html/css-no-empty-blocks": "warn",
+			"html/head-order": "warn",
+			"html/no-duplicate-class": "warn",
+			"html/no-duplicate-in-head": "warn",
+			"html/no-invalid-attr-value": "warn",
+			"html/no-invalid-entity": "warn",
+			"html/no-nested-interactive": "warn",
+			"html/no-script-style-type": "warn",
+			"html/no-target-blank": "warn",
+			"html/no-whitespace-only-children": "warn",
+			"html/require-details-summary": "warn",
+			"html/require-explicit-size": "warn",
+			"html/require-meta-charset": "warn",
+			"html/svg-require-viewbox": "warn",
+			// SEO
+			"html/require-lang": "off",
+			"html/require-title": "off",
+			// Accessibility
+			// Style
+			"html/attrs-newline": "off",
+			"html/indent": "off",
+		},
+	}, {
+		name: "CSS",
+		files: ["**/*.css"],
+		language: "css/css",
+		plugins: { css },
+		extends: ["css/recommended"],
+		rules: {
+			"css/no-invalid-properties": ["error", { allowUnknownVariables: true }],
+			"css/use-baseline": ["error", { allowProperties: ["user-select"] }],
+		},
+	},
+]);

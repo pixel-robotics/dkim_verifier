@@ -1,7 +1,7 @@
 /**
  * General utility functions that do not have any dependencies.
  *
- * Copyright (c) 2013-2023 Philippe Lieser
+ * Copyright (c) 2013-2023;2025-2026 Philippe Lieser
  *
  * This software is licensed under the terms of the MIT License.
  *
@@ -10,7 +10,6 @@
  */
 
 // @ts-check
-/* eslint-env shared-node-browser */
 /* eslint-disable no-use-before-define */
 
 /**
@@ -24,7 +23,6 @@ export class Deferred {
 		this.promise = new Promise((resolve, reject) => {
 			/** @type {(reason: T) => void} */
 			this.resolve = resolve;
-			/** @type {(reason: any) => void} */
 			this.reject = reject;
 		});
 	}
@@ -64,6 +62,7 @@ export function addrIsInDomain2(addr, domain) {
  * @returns {import("ts-essentials").DeepWritable<T>}
  */
 export function copy(src) {
+	// eslint-disable-next-line unicorn/prefer-structured-clone
 	return JSON.parse(JSON.stringify(src));
 }
 
@@ -85,7 +84,7 @@ export function dateToString(date) {
  * @returns {string}
  */
 export function decodeBinaryString(binaryString) {
-	// eslint-disable-next-line no-magic-numbers
+	// eslint-disable-next-line no-magic-numbers, unicorn/prefer-code-point
 	const buffer = Uint8Array.from(binaryString, x => x.charCodeAt(0) & 0xFF);
 	const utf8decoder = new TextDecoder();
 	return utf8decoder.decode(buffer);
@@ -104,13 +103,32 @@ export function domainIsInDomain(domain1, domain2) {
 }
 
 /**
+ * Base 64 Encoding with URL and Filename Safe Alphabet.
+ *
+ * Defined in <https://datatracker.ietf.org/doc/html/rfc4648#section-5>.
+ *
+ * @param {Uint8Array} data
+ * @param {boolean} omitPadding
+ * @returns {string}
+ */
+export function encodeBase64Url(data, omitPadding) {
+	// Starting with TB 133 this could be replaced with Uint8Array.prototype.toBase64().
+	// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array/toBase64
+	let encoded = btoa(String.fromCodePoint(...data)).replaceAll("+", "-").replaceAll("/", "_");
+	if (omitPadding) {
+		encoded = encoded.replaceAll("=", "");
+	}
+	return encoded;
+}
+
+/**
  * Returns the full domain for an e-mail address.
  *
  * @param {string} addr
  * @returns {string}
  */
 export function getDomainFromAddr(addr) {
-	return addr.substr(addr.lastIndexOf("@") + 1);
+	return addr.slice(addr.lastIndexOf("@") + 1);
 }
 
 /**
@@ -129,11 +147,14 @@ export async function promiseWithTimeout(ms, promise) {
 		}, ms);
 	});
 
-	await Promise.race([
-		promise,
-		timeout
-	]);
-	clearTimeout(timeoutId);
+	try {
+		await Promise.race([
+			promise,
+			timeout,
+		]);
+	} finally {
+		clearTimeout(timeoutId);
+	}
 	return promise;
 }
 
@@ -157,7 +178,7 @@ export function sleep(ms) {
  */
 export function stringEndsWith(str, x) {
 	const index = str.toLowerCase().lastIndexOf(x.toLowerCase());
-	return index >= 0 && index === str.length - x.length;
+	return index !== -1 && index === str.length - x.length;
 }
 
 /**
@@ -170,4 +191,17 @@ export function stringEndsWith(str, x) {
  */
 export function stringEqual(str1, str2) {
 	return str1.toLowerCase() === str2.toLowerCase();
+}
+
+/**
+ * Converts a string to an UTF-8 encoded binary string.
+ * https://developer.mozilla.org/en-US/docs/Web/API/DOMString/Binary.
+ *
+ * @param {string} str
+ * @returns {string} - (binary string)
+ */
+export function toBinaryString(str) {
+	const encoder = new TextEncoder();
+	const utf8Encoded = encoder.encode(str);
+	return String.fromCodePoint(...utf8Encoded);
 }

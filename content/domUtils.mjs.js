@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021-2022 Philippe Lieser
+ * Copyright (c) 2021-2022;2025 Philippe Lieser
  *
  * This software is licensed under the terms of the MIT License.
  *
@@ -10,6 +10,7 @@
 import { Deferred } from "../modules/utils.mjs.js";
 
 // @ts-check
+/* eslint-disable jsdoc/reject-any-type */
 
 /**
  * @param {string} id
@@ -33,28 +34,14 @@ export function uploadJsonData() {
 	const inputElement = document.createElement("input");
 	inputElement.type = "file";
 	inputElement.accept = "application/json";
-	inputElement.addEventListener("change", (_event) => {
+	inputElement.addEventListener("change", async (_event) => {
 		try {
 			if (!inputElement.files || !inputElement.files[0]) {
 				throw new Error("Input element has no file");
 			}
 
-			const fileReader = new FileReader();
-			fileReader.addEventListener("error", () => {
-				deferredData.reject(new Error("Error reading file"));
-			});
-			fileReader.addEventListener("load", () => {
-				try {
-					if (typeof fileReader.result !== "string") {
-						throw new Error("File content has unexpected type");
-					}
-					deferredData.resolve(JSON.parse(fileReader.result));
-				} catch (error) {
-					deferredData.reject(error);
-				}
-			});
-			fileReader.readAsText(inputElement.files[0]);
-
+			const file = await inputElement.files[0].text();
+			deferredData.resolve(JSON.parse(file));
 		} catch (error) {
 			deferredData.reject(error);
 		}

@@ -4,7 +4,7 @@
  *
  * This module is NOT conform to DMARC.
  *
- * Copyright (c) 2014-2019;2021-2023 Philippe Lieser
+ * Copyright (c) 2014-2019;2021-2023;2025-2026 Philippe Lieser
  *
  * This software is licensed under the terms of the MIT License.
  *
@@ -13,16 +13,15 @@
  */
 
 // @ts-check
-///<reference path="../../experiments/mailUtils.d.ts" />
 ///<reference path="../dns.d.ts" />
-/* eslint-env webextensions */
 /* eslint-disable no-magic-numbers */
 /* eslint-disable no-use-before-define */
 
-import { DKIM_Error, DKIM_TempError } from "../error.mjs.js";
+import { DKIM_Error } from "../error.mjs.js";
 import DNS from "../dns.mjs.js";
 import Logging from "../logging.mjs.js";
 import RfcParser from "../rfcParser.mjs.js";
+import getBaseDomainFromAddr from "../publicSuffixList.mjs";
 import { getDomainFromAddr } from "../utils.mjs.js";
 import prefs from "../preferences.mjs.js";
 
@@ -56,9 +55,9 @@ export default class DMARC {
 		let DMARCPolicy;
 		try {
 			DMARCPolicy = await getDMARCPolicy(fromAddress, this._queryDnsTxt);
-		} catch (e) {
+		} catch (error) {
 			// ignore errors on getting the DMARC policy
-			log.error("Ignored error on getting the DMARC policy", e);
+			log.error("Ignored error on getting the DMARC policy", error);
 			return res;
 		}
 		const neededPolicy = prefs["policy.DMARC.shouldBeSigned.neededPolicy"];
@@ -68,11 +67,7 @@ export default class DMARC {
 				(neededPolicy === "reject" && DMARCPolicy.p === "reject"))) {
 			res.shouldBeSigned = true;
 
-			if (DMARCPolicy.source === DMARCPolicy.domain) {
-				res.sdid = [DMARCPolicy.domain];
-			} else {
-				res.sdid = [DMARCPolicy.domain, DMARCPolicy.source];
-			}
+			res.sdid = DMARCPolicy.source === DMARCPolicy.domain ? [DMARCPolicy.domain] : [DMARCPolicy.domain, DMARCPolicy.source];
 		}
 
 		return res;
@@ -126,7 +121,7 @@ export default class DMARC {
  * @param {queryDnsTxtCallback} queryDnsTxt
  * @returns {Promise<DMARCPolicy|null>}
  * @throws {DKIM_Error}
- * @throws {DKIM_TempError}
+ * @throws {import("../error.mjs.js").DKIM_TempError}
  */
 async function getDMARCPolicy(fromAddress, queryDnsTxt) {
 	let dmarcRecord;
@@ -154,7 +149,7 @@ async function getDMARCPolicy(fromAddress, queryDnsTxt) {
 
 	if (!dmarcRecord) {
 		// get the DMARC Record of the base domain
-		baseDomain = await browser.mailUtils.getBaseDomainFromAddr(fromAddress);
+		baseDomain = getBaseDomainFromAddr(fromAddress);
 		if (domain !== baseDomain) {
 			dmarcRecord = await getDMARCRecord(baseDomain, queryDnsTxt);
 
@@ -209,29 +204,21 @@ async function getDMARCPolicy(fromAddress, queryDnsTxt) {
  * @param {queryDnsTxtCallback} queryDnsTxt
  * @returns {Promise<DMARCRecord|null>}
  * @throws {DKIM_Error}
- * @throws {DKIM_TempError}
+ * @throws {import("../error.mjs.js").DKIM_TempError}
  */
 async function getDMARCRecord(domain, queryDnsTxt) {
 	let dmarcRecord = null;
 
 	// get the DMARC Record
 	const result = await queryDnsTxt(`_dmarc.${domain}`);
-
-	// throw error on bogus result or DNS error
-	if (result.bogus) {
-		throw new DKIM_TempError("DKIM_DNSERROR_DNSSEC_BOGUS");
-	}
-	if (result.rcode !== DNS.RCODE.NoError && result.rcode !== DNS.RCODE.NXDomain) {
-		log.info("DNS query failed with result:", result);
-		throw new DKIM_TempError("DKIM_DNSERROR_SERVER_ERROR");
-	}
+	DNS.checkForErrors(result);
 
 	// try to parse DMARC Record if record was found in DNS Server
 	if (result.data !== null && result.data[0]) {
 		try {
 			dmarcRecord = parseDMARCRecord(result.data[0]);
-		} catch (e) {
-			log.error("Ignored error in parsing of DMARC record", e);
+		} catch (error) {
+			log.error("Ignored error in parsing of DMARC record", error);
 		}
 	}
 
@@ -252,7 +239,7 @@ function parseDMARCRecord(DMARCRecordStr) {
 		// aspf : null, // SPF identifier alignment mode
 		// fo : null, // Failure reporting options
 		p: "", // Requested Mail Receiver policy
-		pct: NaN, // Percentage of messages from the Domain Owner's
+		pct: Number.NaN, // Percentage of messages from the Domain Owner's
 		// mail stream to which the DMARC mechanism is to be applied
 		// rf : null, // Format to be used for message-specific failure reports
 		// ri : null, // Interval requested between aggregate reports
@@ -260,7 +247,7 @@ function parseDMARCRecord(DMARCRecordStr) {
 		// ruf : null, // Addresses to which message-specific failure information is to
 		// be reported
 		sp: null, // Requested Mail Receiver policy for all subdomains
-		v: "" // Version
+		v: "", // Version
 	};
 
 	// parse tag-value list
@@ -271,7 +258,7 @@ function parseDMARCRecord(DMARCRecordStr) {
 		throw new DKIM_Error("DKIM_DMARCERROR_DUPLICATE_TAG");
 	}
 	if (!(tagMap instanceof Map)) {
-		throw new Error(`unexpected return value from RfcParser.parseTagValueList: ${tagMap}`);
+		throw new TypeError(`unexpected return value from RfcParser.parseTagValueList: ${tagMap}`);
 	}
 
 	// v: Version (plain-text; REQUIRED).  Identifies the record retrieved
@@ -290,11 +277,7 @@ function parseDMARCRecord(DMARCRecordStr) {
 	// strict or relaxed DKIM identifier alignment mode is required by
 	// the Domain Owner.
 	const adkimTag = RfcParser.parseTagValue(tagMap, "adkim", "[rs]", 3);
-	if (adkimTag === null || versionTag[0] === "DMARC1") {
-		dmarcRecord.adkim = "r";
-	} else {
-		dmarcRecord.adkim = adkimTag[0];
-	}
+	dmarcRecord.adkim = adkimTag === null || versionTag[0] === "DMARC1" ? "r" : adkimTag[0];
 
 	// p: Requested Mail Receiver policy (plain-text; REQUIRED for policy
 	// records).  Indicates the policy to be enacted by the Receiver at
@@ -341,7 +324,7 @@ function parseDMARCRecord(DMARCRecordStr) {
 	if (pctTag === null) {
 		dmarcRecord.pct = 100;
 	} else {
-		dmarcRecord.pct = parseInt(pctTag[0], 10);
+		dmarcRecord.pct = Number.parseInt(pctTag[0], 10);
 		if (dmarcRecord.pct < 0 || dmarcRecord.pct > 100) {
 			throw new DKIM_Error("DKIM_DMARCERROR_INVALID_PCT");
 		}

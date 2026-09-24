@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020-2023 Philippe Lieser
+ * Copyright (c) 2020-2025 Philippe Lieser
  *
  * This software is licensed under the terms of the MIT License.
  *
@@ -10,12 +10,11 @@
 // @ts-check
 ///<reference path="../RuntimeMessage.d.ts" />
 ///<reference path="../experiments/dkimHeader.d.ts" />
-/* eslint-env webextensions */
+/* eslint-disable unicorn/prefer-top-level-await */
 
 import * as Conversations from "../modules/conversation.mjs.js";
 import KeyStore, { KeyDb } from "../modules/dkim/keyStore.mjs.js";
 import SignRules, { initSignRulesProxy } from "../modules/dkim/signRules.mjs.js";
-import { migrateKeyStore, migratePrefs, migrateSignRulesUser } from "../modules/migration.mjs.js";
 import AuthVerifier from "../modules/authVerifier.mjs.js";
 import Logging from "../modules/logging.mjs.js";
 import MsgParser from "../modules/msgParser.mjs.js";
@@ -31,13 +30,10 @@ const log = Logging.getLogger("background");
 async function init() {
 	await Logging.initLogLevelFromPrefs();
 
-	await migratePrefs();
 	await prefs.init();
 
-	await migrateSignRulesUser();
 	initSignRulesProxy();
 
-	await migrateKeyStore();
 	KeyDb.initProxy();
 }
 const isInitialized = init();
@@ -53,16 +49,81 @@ browser.tabs.onRemoved.addListener((tabId) => {
 	displayedResultsCache.delete(tabId);
 });
 
-const SHOW = {
+/** @enum {number} */
+const SHOW = /** @type {const} */ ({
 	NEVER: 0,
-	DKIM_VALID: 10,
-	DKIM_VALID_ALL: 20,
-	DKIM_SIGNED: 30,
-	EMAIL: 40,
+	DKIM_VALID: AuthVerifier.DKIM_RES.SUCCESS, // 10
+	DKIM_VALID_ALL: AuthVerifier.DKIM_RES.TEMPFAIL, // 20
+	DKIM_SIGNED: AuthVerifier.DKIM_RES.PERMFAIL, // 30
+	AUTH_RES: 33,
+	EMAIL: AuthVerifier.DKIM_RES.NOSIG, // 40
 	MSG: 50,
-};
+});
 
 const verifier = new AuthVerifier();
+
+const OUR_DOMAINS = new Set(["logivations.com", "pixel-robotics.eu"]);
+
+/**
+ * Get the e-mail address of a message author, falling back to the part in <> if parsing fails.
+ *
+ * @param {string} author
+ * @returns {string}
+ */
+function getAuthorAddress(author) {
+	try {
+		return MsgParser.parseAuthor(author);
+	} catch (error) {
+		log.error("Error parsing author", error);
+		return author.slice(author.lastIndexOf("<") + 1, author.lastIndexOf(">"));
+	}
+}
+
+/**
+ * Whether an e-mail address belongs to Logivations or Pixel Robotics.
+ *
+ * @param {string} address
+ * @returns {boolean}
+ */
+function isOurDomain(address) {
+	const domain = address.split("@")[1]?.toLowerCase();
+	return OUR_DOMAINS.has(domain ?? "");
+}
+
+/**
+ * Add a Logivations/Pixel Robotics phishing warning to the warnings, if needed.
+ * The "@@color@@" prefix is interpreted by the dkimHeader experiment to show a colored warning box.
+ *
+ * @param {string[]} warnings
+ * @param {browser.messages.MessageHeader} message
+ * @param {number} dkimResNum
+ * @returns {void}
+ */
+function addDomainWarning(warnings, message, dkimResNum) {
+	// Own drafts and sent mails are never signed, so don't warn about them
+	const folderType = message.folder?.specialUse?.[0] ?? message.folder?.type;
+	if (folderType === "drafts" || folderType === "sent") {
+		return;
+	}
+	/** @type {Set<number>} */
+	const errorResults = new Set([
+		AuthVerifier.DKIM_RES.TEMPFAIL,
+		AuthVerifier.DKIM_RES.PERMFAIL,
+		AuthVerifier.DKIM_RES.PERMFAIL_NOSIG,
+		AuthVerifier.DKIM_RES.NOSIG,
+	]);
+	const hasError = errorResults.has(dkimResNum);
+	const ours = isOurDomain(getAuthorAddress(message.author));
+	if (hasError) {
+		if (ours) {
+			warnings.push(`@@red@@${browser.i18n.getMessage("DKIM_WARNING_SPOOFING_OUR_DOMAIN")}`);
+		} else {
+			warnings.push(`@@orange@@${browser.i18n.getMessage("DKIM_WARNING_ADDRESS_NOT_VERIFIED")}`);
+		}
+	} else if (!ours) {
+		warnings.push(`@@yellow@@${browser.i18n.getMessage("DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS")}`);
+	}
+}
 
 /**
  * Verify a message in a specific tab and display the result.
@@ -74,7 +135,6 @@ const verifier = new AuthVerifier();
 // eslint-disable-next-line complexity
 async function verifyMessage(tabId, message) {
 	try {
-		console.log(message)
 		// show from tooltip if not completely disabled
 		if (prefs.showDKIMFromTooltip > SHOW.NEVER) {
 			browser.dkimHeader.showFromTooltip(tabId, message.id, true);
@@ -85,8 +145,7 @@ async function verifyMessage(tabId, message) {
 			throw new Error("Result does not contain a DKIM result.");
 		}
 		displayedResultsCache.set(tabId, res);
-		const warnings_ref = res.dkim[0].warnings_str ?? [];
-		const warnings = [...warnings_ref];
+		const warnings = [...res.dkim[0].warnings_str ?? []];
 		/** @type {Parameters<typeof browser.dkimHeader.setDkimHeaderResult>[5]} */
 		const arh = {};
 		if (res.arh && res.arh.dkim && res.arh.dkim[0]) {
@@ -98,46 +157,8 @@ async function verifyMessage(tabId, message) {
 		if (res.dmarc && res.dmarc[0]) {
 			arh.dmarc = res.dmarc[0].result;
 		}
-		let has_error = false;
+		addDomainWarning(warnings, message, res.dkim[0].res_num);
 
-		switch (res.dkim[0].res_num) {
-			case AuthVerifier.DKIM_RES.TEMPFAIL:
-			case AuthVerifier.DKIM_RES.PERMFAIL:
-			case AuthVerifier.DKIM_RES.PERMFAIL_NOSIG:
-			case AuthVerifier.DKIM_RES.NOSIG:
-				has_error = true;
-				break;
-		}
-
-		// check if message.author domain is in logivations.com or pixel-robotics.eu, otherwise add a warning
-		let from = message.author;
-		try {
-			from = MsgParser.parseAuthor(message.author, prefs["internationalized.enable"]);
-		
-		}  catch (e) {
-			log.error("Error parsing author", e);
-			// parse manually
-			from = from.substring(from.lastIndexOf('<') + 1, from.lastIndexOf('>'));
-		}
-		// @ts-ignore
-		if(message.folder && message.folder.type && (message.folder.type == "drafts" || message.folder.type == "sent")){
-			has_error = false;
-		} else {
-			// simply check text after  @
-			const domain = from.split('@')[1];
-			if(has_error){
-				if (domain !== 'logivations.com' && domain !== 'pixel-robotics.eu') {
-					warnings.push("@@orange@@"+browser.i18n.getMessage("DKIM_WARNING_ADDRESS_NOT_VERIFIED"));
-				} else {
-					warnings.push("@@red@@"+browser.i18n.getMessage("DKIM_WARNING_SPOOFING_OUR_DOMAIN"));
-				}
-			} else {
-				if (domain !== 'logivations.com' && domain !== 'pixel-robotics.eu') {
-					warnings.push("@@yellow@@"+browser.i18n.getMessage("DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS"));
-				}
-			}
-		}
-		
 		const messageStillDisplayed = await browser.dkimHeader.setDkimHeaderResult(
 			tabId,
 			message.id,
@@ -151,9 +172,11 @@ async function verifyMessage(tabId, message) {
 			return;
 		}
 		browser.dkimHeader.showDkimHeader(tabId, message.id, true);
+
 		if (prefs.showDKIMFromTooltip > SHOW.NEVER && prefs.showDKIMFromTooltip < res.dkim[0].res_num) {
 			browser.dkimHeader.showFromTooltip(tabId, message.id, false);
 		}
+
 		if (prefs.colorFrom) {
 			switch (res.dkim[0].res_num) {
 				case AuthVerifier.DKIM_RES.SUCCESS: {
@@ -164,43 +187,32 @@ async function verifyMessage(tabId, message) {
 					}
 					break;
 				}
-				case AuthVerifier.DKIM_RES.TEMPFAIL:
+				case AuthVerifier.DKIM_RES.TEMPFAIL: {
 					browser.dkimHeader.highlightFromAddress(tabId, message.id, prefs["color.tempfail.text"], prefs["color.tempfail.background"]);
 					break;
-				case AuthVerifier.DKIM_RES.PERMFAIL:
+				}
+				case AuthVerifier.DKIM_RES.PERMFAIL: {
 					browser.dkimHeader.highlightFromAddress(tabId, message.id, prefs["color.permfail.text"], prefs["color.permfail.background"]);
 					break;
+				}
 				case AuthVerifier.DKIM_RES.PERMFAIL_NOSIG:
-				case AuthVerifier.DKIM_RES.NOSIG:
+				case AuthVerifier.DKIM_RES.NOSIG: {
 					browser.dkimHeader.highlightFromAddress(tabId, message.id, prefs["color.nosig.text"], prefs["color.nosig.background"]);
 					break;
-				default:
+				}
+				default: {
 					throw new Error(`unknown res_num: ${res.dkim[0].res_num}`);
+				}
 			}
-
 		}
-	} catch (e) {
-		log.fatal("Unexpected error during verifyMessage", e);
-		let author = message.author;
+	} catch (error) {
+		log.fatal("Unexpected error during verifyMessage", error);
 		// check if message.author domain is in logivations.com or pixel-robotics.eu, otherwise add a warning
-		try {
-			author = MsgParser.parseAuthor(message.author, prefs["internationalized.enable"]);
-		
-		}  catch (e) {
-			log.error("Error parsing author", e);
-			// parse manually
-			author = author.substring(author.lastIndexOf('<') + 1, author.lastIndexOf('>'));
+		/** @type {string[]} */
+		const warnings = [];
+		if (!isOurDomain(getAuthorAddress(message.author))) {
+			warnings.push(`@@orange@@${browser.i18n.getMessage("DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS")}`);
 		}
-		// simply check text after  @
-		const domain = author.split('@')[1];
-		/**
-		 * @type {string[]}
-		 */
-		let warnings = [];
-		if (domain !== 'logivations.com' && domain !== 'pixel-robotics.eu') {
-			warnings.push("@@orange@@"+browser.i18n.getMessage("DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS"));
-		}
-
 		browser.dkimHeader.showDkimHeader(tabId, message.id, true);
 		browser.dkimHeader.setDkimHeaderResult(
 			tabId, message.id, browser.i18n.getMessage("DKIM_INTERNALERROR_NAME"), warnings, "", {});
@@ -225,7 +237,7 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
 		displayedResultsCache.delete(tab.id);
 
 		// Nothing to verify if msg is RSS feed or news
-		const account = message.folder ? await browser.accounts.get(message.folder.accountId) : null;
+		const account = message.folder?.accountId ? await browser.accounts.get(message.folder.accountId) : null;
 		if (account && (account.type === "rss" || account.type === "nntp")) {
 			browser.dkimHeader.showDkimHeader(tab.id, message.id, prefs.showDKIMHeader >= SHOW.MSG);
 			browser.dkimHeader.setDkimHeaderResult(
@@ -237,19 +249,16 @@ browser.messageDisplay.onMessageDisplayed.addListener(async (tab, message) => {
 		// If we already know that the header should be shown, show it now
 		if (prefs.showDKIMHeader >= SHOW.EMAIL) {
 			browser.dkimHeader.showDkimHeader(tab.id, message.id, true);
-		}
-		else {
+		} else {
 			const { headers } = await browser.messages.getFull(message.id);
-			if (headers && Object.keys(headers).includes("dkim-signature")) {
-				if (prefs.showDKIMHeader >= SHOW.DKIM_SIGNED) {
-					browser.dkimHeader.showDkimHeader(tab.id, message.id, true);
-				}
+			if (headers && Object.keys(headers).includes("dkim-signature") && prefs.showDKIMHeader >= SHOW.DKIM_SIGNED) {
+				browser.dkimHeader.showDkimHeader(tab.id, message.id, true);
 			}
 		}
 
 		await verifyMessage(tab.id, message);
-	} catch (e) {
-		log.fatal("Unexpected error during onMessageDisplayed", e);
+	} catch (error) {
+		log.fatal("Unexpected error during onMessageDisplayed", error);
 		browser.dkimHeader.showDkimHeader(tab.id, message.id, true);
 		browser.dkimHeader.setDkimHeaderResult(
 			tab.id, message.id, browser.i18n.getMessage("DKIM_INTERNALERROR_NAME"), [], "", {});
@@ -269,8 +278,8 @@ browser.messageDisplay.onMessagesDisplayed.addListener(async (tab, messages) => 
 			}
 		}
 		// Normal Thunderbird view ("classic") is handled in onMessageDisplayed
-	} catch (e) {
-		log.fatal("Unexpected error during onMessagesDisplayed", e);
+	} catch (error) {
+		log.fatal("Unexpected error during onMessagesDisplayed", error);
 	}
 });
 
@@ -282,13 +291,14 @@ class DisplayAction {
 	 * Determinate which user actions should be enabled.
 	 *
 	 * @param {number} tabId
-	 * @returns {RuntimeMessage.DisplayAction.queryButtonStateResult}
+	 * @returns {RuntimeMessage.DisplayAction.queryResultStateResult}
 	 */
-	static queryButtonState(tabId) {
+	// eslint-disable-next-line complexity
+	static queryResultState(tabId) {
 		const res = displayedResultsCache.get(tabId);
 		const keyStored = prefs["key.storing"] !== KeyStore.KEY_STORING.DISABLED &&
 			res?.dkim[0]?.sdid !== undefined && res?.dkim[0].selector !== undefined;
-		/** @type {RuntimeMessage.DisplayAction.queryButtonStateResult} */
+		/** @type {RuntimeMessage.DisplayAction.queryResultStateResult} */
 		const state = {
 			reverifyDKIMSignature: res !== null,
 			policyAddUserException:
@@ -301,6 +311,7 @@ class DisplayAction {
 				),
 			markKeyAsSecure: keyStored && res?.dkim[0]?.keySecure === false,
 			updateKey: keyStored,
+			dkim: res?.dkim ?? [],
 		};
 		return state;
 	}
@@ -343,17 +354,7 @@ class DisplayAction {
 		if (!message) {
 			return;
 		}
-		let from = message.author;
-		// check if message.author domain is in logivations.com or pixel-robotics.eu, otherwise add a warning
-		try {
-			from = MsgParser.parseAuthor(message.author, prefs["internationalized.enable"]);
-		
-		}  catch (e) {
-			log.error("Error parsing author", e);
-			// parse manually
-			from = from.substring(from.lastIndexOf('<') + 1, from.lastIndexOf('>'));
-		}
-
+		const from = getAuthorAddress(message.author);
 		await SignRules.addException(from);
 
 		await DisplayAction.#reverifyMessage(tabId, message);
@@ -415,9 +416,9 @@ browser.runtime.onMessage.addListener((runtimeMessage, sender /*, sendResponse*/
 	if (request.module !== "DisplayAction") {
 		return;
 	}
-	if (request.method === "queryButtonState") {
+	if (request.method === "queryResultState") {
 		// eslint-disable-next-line consistent-return
-		return Promise.resolve(DisplayAction.queryButtonState(request.parameters.tabId));
+		return Promise.resolve(DisplayAction.queryResultState(request.parameters.tabId));
 	}
 	if (request.method === "reverifyDKIMSignature") {
 		const promise = DisplayAction.reverifyDKIMSignature(request.parameters.tabId);

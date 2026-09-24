@@ -276,7 +276,7 @@
 		"message": "Chave DKIM não é assinada por DNSSEC"
 	},
 	"DKIM_POLICYERROR_WRONG_SDID": {
-		"message": "Signatário incorreto (deveria ser $1)"
+		"message": "Assinante incorreto (deveria ser $1)"
 	},
 	"DKIM_POLICYERROR_UNSIGNED_HEADER_ADDED": {
 		"message": "Cabeçalho não assinado '$1' foi adicionado",
@@ -300,9 +300,6 @@
 	},
 	"DKIM_SIGWARNING_FROM_NOT_IN_SDID": {
 		"message": "'De' não está no domínio de assinatura"
-	},
-	"DKIM_SIGWARNING_FROM_NOT_IN_AUID": {
-		"message": "'De' não corresponde ao identificador do usuário"
 	},
 	"DKIM_SIGWARNING_UNSIGNED_HEADER": {
 		"message": "Cabeçalho '$1' não assinado",
@@ -367,11 +364,15 @@
 	"options_dns.resolver.value.2": {
 		"message": "libunbound"
 	},
+	"options_dns.resolver.value.3": {
+		"message": "DNS over HTTPS (DoH)",
+		"description": "Resolver using https://en.wikipedia.org/wiki/DNS_over_HTTPS"
+	},
 	"options_dns.getNameserversFromOS": {
 		"message": "Obter servidores DNS da configuração do sistema operacional"
 	},
 	"options_dns.nameserver": {
-		"message": "Servidores DNS (Sintaxe (EBNF): host[\":\"porta]{\";\"host[\":\"porta]} ):"
+		"message": "Servidores DNS ( Sintaxe (EBNF): host[\":\"porta]{\";\"host[\":\"porta]} ):"
 	},
 	"options_dns.timeout_connect": {
 		"message": "Tempo limite de conexão DNS (em segundos):",
@@ -400,6 +401,9 @@
 	},
 	"options_dns.libunbound.path.relToProfileDir": {
 		"message": "Caminho relativo ao diretório do perfil"
+	},
+	"options_dns.doh.server": {
+		"message": "Servidor DoH:"
 	},
 	// ---------- Policy options tab ----------
 	"options_general.policy": {
@@ -433,10 +437,10 @@
 		"message": "Tratar SDID incorreto como um aviso em vez de um erro"
 	},
 	"options_viewSigners": {
-		"message": "Regras de signatários…"
+		"message": "Regras de assinantes…"
 	},
 	"options_viewSignerDefaults": {
-		"message": "Regras padrão de signatários…"
+		"message": "Regras padrão de assinantes…"
 	},
 	"options_policy.DMARC.shouldBeSigned.enable": {
 		"message": "Usar DMARC para determinar heuristicamente se um e-mail deve ser assinado"
@@ -476,6 +480,9 @@
 	"options_showDKIM.value.30": {
 		"message": "quando um e-mail com uma assinatura DKIM é visualizado"
 	},
+	"options_showDKIM.value.33": {
+		"message": "quando um e-mail com uma assinatura DKIM, resultado SPF ou DMARC é visualizado"
+	},
 	"options_showDKIM.value.40": {
 		"message": "quando um e-mail é visualizado"
 	},
@@ -493,6 +500,10 @@
 	},
 	"options_color.background": {
 		"message": "Fundo:"
+	},
+	"options_color.preview": {
+		"message": "prévia",
+		"description": "Text used to preview the colors for the from highlighting"
 	},
 	"options_color.success": {
 		"message": "Assinatura válida"
@@ -621,16 +632,84 @@
 	},
 	// ==================== Actions ====================
 	"dkim_verifier.reverifyDKIMSignature": {
-		"message": "Reverificar assinatura DKIM"
+		"message": "Reverificar assinatura DKIM",
+		"description": "Text of the button in the DKIM details pop-up."
+	},
+	"dkim_verifier.reverifyDKIMSignature.tooltip": {
+		"message": "Inicia uma nova verificação do e-mail exibido. Se o salvamento do resultado da verificação estiver habilitado, o resultado salvo será atualizado.",
+		"description": "Tooltip of the button explaining what it does."
 	},
 	"dkim_verifier.policyAddUserException": {
-		"message": "Adicionar exceção de deve ser assinado"
+		"message": "Adicionar exceção de deve ser assinado",
+		"description": "Text of the button in the DKIM details pop-up."
+	},
+	"dkim_verifier.policyAddUserException.tooltip": {
+		"message": "Adiciona uma regra de assinatura para que e-mails do endereço 'De' não precisem ser assinados. Também iniciará uma nova verificação.",
+		"description": "Tooltip of the button explaining what it does."
 	},
 	"dkim_verifier.markKeyAsSecure": {
-		"message": "Marcar chave DKIM como segura"
+		"message": "Marcar chave DKIM como segura",
+		"description": "Text of the button in the DKIM details pop-up."
+	},
+	"dkim_verifier.markKeyAsSecure.tooltip": {
+		"message": "Marca a chave DKIM armazenada em cache do primeiro resultado DKIM como protegida pelo DNSSEC. Também iniciará uma nova verificação.",
+		"description": "Tooltip of the button explaining what it does."
 	},
 	"dkim_verifier.updateKey": {
-		"message": "Atualizar chave DKIM"
+		"message": "Atualizar chave DKIM",
+		"description": "Text of the button in the DKIM details pop-up."
+	},
+	"dkim_verifier.updateKey.tooltip": {
+		"message": "Atualiza as chaves DKIM armazenadas em cache usadas neste e-mail buscando-as novamente do DNS. Também iniciará uma nova verificação.",
+		"description": "Tooltip of the button explaining what it does."
+	},
+	"button.options": {
+		"message": "Opções",
+		"description": "Button to open the options page of the add-on."
+	},
+	"button.options.tooltip": {
+		"message": "Abre as opções da extensão em uma nova aba.",
+		"description": "Tooltip for the button to open the options page of the add-on."
+	},
+	"details.result": {
+		"message": "Resultado",
+		"description": "Detailed view row name for the overall DKIM result."
+	},
+	"details.warnings": {
+		"message": "Avisos",
+		"description": "Detailed view row name for the warnings of the DKIM signature."
+	},
+	"details.SDID": {
+		"message": "SDID",
+		"description": "Detailed view row name for the SDID."
+	},
+	"details.AUID": {
+		"message": "AUID",
+		"description": "Detailed view row name for the AUID."
+	},
+	"details.signDate": {
+		"message": "Data da assinatura",
+		"description": "Detailed view row name for the date (including time) the signature was created."
+	},
+	"details.expirationDate": {
+		"message": "Data da expiração",
+		"description": "Detailed view row name for the date (including time) the signature expires."
+	},
+	"details.algorithm": {
+		"message": "Algoritmo",
+		"description": "Detailed view row name for the algorithm used in the signature."
+	},
+	"details.signedHeaders": {
+		"message": "Cabeçalhos assinados",
+		"description": "Detailed view row name for the message headers signed by DKIM."
+	},
+	"details.noDate": {
+		"message": "Sem horário incluído na assinatura",
+		"description": "Value shown for sign and expiration date if no date is given in the signature."
+	},
+	"details.potentiallyOutdatedKeyWarning": {
+		"message": "O armazenamento em cache de chaves DKIM está habilitado. O motivo da assinatura inválida pode ser uma chave desatualizada. Tente a ação \"$1\" para atualizar a chave e iniciar uma nova verificação.",
+		"description": "Potential info note shown. $1 will be replaced with the text of dkim_verifier.updateKey"
 	},
 	// ==================== Table Views ====================
 	"treeviewKeys.title": {
@@ -656,13 +735,13 @@
 		"message": "DNSSEC"
 	},
 	"treeviewKeys.deleteSelectedRows": {
-		"message": "Excluir chaves selecionadas"
+		"message": "Apagar chaves selecionadas"
 	},
 	"treeviewSigners.user.title": {
-		"message": "Regras de signatários"
+		"message": "Regras de assinantes"
 	},
 	"treeviewSigners.default.title": {
-		"message": "Regras padrão de signatários"
+		"message": "Regras padrão de assinantes"
 	},
 	"treeviewSigners.treecol.domain": {
 		"message": "Domínio"
@@ -689,7 +768,7 @@
 		"message": "Adicionar regra…"
 	},
 	"treeviewSigners.deleteSelectedRows": {
-		"message": "Excluir regras selecionadas"
+		"message": "Apagar regras selecionadas"
 	},
 	"treeviewSigners.exportRules": {
 		"message": "Exportar regras…",
@@ -716,7 +795,7 @@
 		"description": "Button in import dialog for replacing existing rules"
 	},
 	"addSignersRule.title": {
-		"message": "Adicionar regra de signatários"
+		"message": "Adicionar regra de assinantes"
 	},
 	"addSignersRule.button.add": {
 		"message": "Adicionar regra",
@@ -744,7 +823,7 @@
 		"message": "Ajuda…"
 	},
 	"signersRuleHelp.title": {
-		"message": "Ajuda das regras de signatários"
+		"message": "Ajuda das regras de assinantes"
 	},
 	"domain.description": {
 		"message": "Será comparado com o domínio base do endereço 'De'. Por exemplo, o domínio base de 'email.example.com.br' é 'example.com.br'."

@@ -1,7 +1,7 @@
 /**
  * Provides access to the add-ons preferences.
  *
- * Copyright (c) 2020-2023 Philippe Lieser
+ * Copyright (c) 2020-2023;2025-2026 Philippe Lieser
  *
  * This software is licensed under the terms of the MIT License.
  *
@@ -10,7 +10,6 @@
  */
 
 // @ts-check
-/* eslint-env webextensions */
 /* eslint no-magic-numbers: "off" */
 /* eslint-disable jsdoc/match-description */
 
@@ -86,7 +85,16 @@ export class BasePreferences {
 		if (typeof value === "boolean") {
 			return value;
 		}
-		if (typeof value === "undefined") {
+		// On e.g. macOS managed boolean options will be represented as integer, so we accept 0 and 1 as special values.
+		if (typeof value === "number") {
+			if (value === 0) {
+				return false;
+			}
+			if (value === 1) {
+				return true;
+			}
+		}
+		if (value === undefined) {
 			return defaultValue;
 		}
 		throw new Error(`Preference ${name} has unexpected type ${typeof value}`);
@@ -102,7 +110,7 @@ export class BasePreferences {
 		if (typeof value === "number") {
 			return value;
 		}
-		if (typeof value === "undefined") {
+		if (value === undefined) {
 			return defaultValue;
 		}
 		throw new Error(`Preference ${name} has unexpected type ${typeof value}`);
@@ -118,7 +126,7 @@ export class BasePreferences {
 		if (typeof value === "string") {
 			return value;
 		}
-		if (typeof value === "undefined") {
+		if (value === undefined) {
 			return defaultValue;
 		}
 		throw new Error(`Preference ${name} has unexpected type ${typeof value}`);
@@ -129,10 +137,12 @@ export class BasePreferences {
 	 * @returns {boolean|number|string}
 	 */
 	getValue(name) {
-		if (!Object.prototype.hasOwnProperty.call(BasePreferences.prototype, name)) {
+		if (!Object.hasOwn(BasePreferences.prototype, name)) {
 			throw new Error(`Can not get nonexisting preference "${name}"`);
 		}
+		// eslint-disable-next-line jsdoc/reject-any-type
 		/** @type {any} */
+		// eslint-disable-next-line unicorn/no-this-assignment
 		const that = this;
 		return that[name];
 	}
@@ -144,7 +154,7 @@ export class BasePreferences {
 	getBool(name) {
 		const value = this.getValue(name);
 		if (typeof value !== "boolean") {
-			throw new Error(`Preference ${name} has unexpected type ${typeof value}`);
+			throw new TypeError(`Preference ${name} has unexpected type ${typeof value}`);
 		}
 		return value;
 	}
@@ -156,7 +166,7 @@ export class BasePreferences {
 	getNumber(name) {
 		const value = this.getValue(name);
 		if (typeof value !== "number") {
-			throw new Error(`Preference ${name} has unexpected type ${typeof value}`);
+			throw new TypeError(`Preference ${name} has unexpected type ${typeof value}`);
 		}
 		return value;
 	}
@@ -168,7 +178,7 @@ export class BasePreferences {
 	getString(name) {
 		const value = this.getValue(name);
 		if (typeof value !== "string") {
-			throw new Error(`Preference ${name} has unexpected type ${typeof value}`);
+			throw new TypeError(`Preference ${name} has unexpected type ${typeof value}`);
 		}
 		return value;
 	}
@@ -180,7 +190,7 @@ export class BasePreferences {
 	 */
 	async setValue(name, value) {
 		if (typeof value !== typeof this.getValue(name)) {
-			throw new Error(`Can not set preference with type ${typeof this.getValue(name)} to a ${typeof value}`);
+			throw new TypeError(`Can not set preference with type ${typeof this.getValue(name)} to a ${typeof value}`);
 		}
 		await this._valueSetter(name, value);
 	}
@@ -192,6 +202,7 @@ export class BasePreferences {
 	get "dkim.enable"() {
 		return this.#tryGetBoolValue("dkim.enable", true);
 	}
+
 	/**
 	 * - 0: don't store DKIM keys
 	 * - 1: store DKIM keys
@@ -200,6 +211,7 @@ export class BasePreferences {
 	get "key.storing"() {
 		return this.#tryGetNumberValue("key.storing", 0);
 	}
+
 	get "saveResult"() {
 		return this.#tryGetBoolValue("saveResult", false);
 	}
@@ -207,9 +219,11 @@ export class BasePreferences {
 	get "arh.read"() {
 		return this.#tryGetBoolValue("arh.read", false);
 	}
+
 	get "arh.replaceAddonResult"() {
 		return this.#tryGetBoolValue("arh.replaceAddonResult", true);
 	}
+
 	get "arh.relaxedParsing"() {
 		return this.#tryGetBoolValue("arh.relaxedParsing", false);
 	}
@@ -231,6 +245,7 @@ export class BasePreferences {
 	get "error.illformed_i.treatAs"() {
 		return this.#tryGetNumberValue("error.illformed_i.treatAs", 1);
 	}
+
 	/**
 	 * - 0: error
 	 * - 1: warning
@@ -239,6 +254,7 @@ export class BasePreferences {
 	get "error.illformed_s.treatAs"() {
 		return this.#tryGetNumberValue("error.illformed_s.treatAs", 1);
 	}
+
 	/**
 	 * - 0: error
 	 * - 1: warning
@@ -247,9 +263,11 @@ export class BasePreferences {
 	get "error.policy.key_insecure.treatAs"() {
 		return this.#tryGetNumberValue("error.policy.key_insecure.treatAs", 2);
 	}
+
 	get "error.key_testmode.ignore"() {
 		return this.#tryGetBoolValue("error.key_testmode.ignore", false);
 	}
+
 	/**
 	 * - 0: error
 	 * - 1: warning
@@ -258,6 +276,7 @@ export class BasePreferences {
 	get "error.algorithm.sign.rsa-sha1.treatAs"() {
 		return this.#tryGetNumberValue("error.algorithm.sign.rsa-sha1.treatAs", 1);
 	}
+
 	/**
 	 * - 0: error
 	 * - 1: warning
@@ -283,22 +302,32 @@ export class BasePreferences {
 	get "dns.resolver"() {
 		return this.#tryGetNumberValue("dns.resolver", 1);
 	}
+
 	get "dns.getNameserversFromOS"() {
 		return this.#tryGetBoolValue("dns.getNameserversFromOS", true);
 	}
+
 	get "dns.nameserver"() {
 		return this.#tryGetStringValue("dns.nameserver", "8.8.8.8");
 	}
+
+	get "dns.doh.server"() {
+		return this.#tryGetStringValue("dns.doh.server", "https://dns.quad9.net/dns-query");
+	}
+
 	get "dns.timeout_connect"() {
 		return this.#tryGetNumberValue("dns.timeout_connect", 5);
 	}
+
 	get "dns.dnssec.trustAnchor"() {
 		return this.#tryGetStringValue("dns.dnssec.trustAnchor",
 			". IN DS 20326 8 2 E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D");
 	}
+
 	get "dns.proxy.enable"() {
 		return this.#tryGetBoolValue("dns.proxy.enable", false);
 	}
+
 	/**
 	 * - socks
 	 * - socks4
@@ -306,18 +335,23 @@ export class BasePreferences {
 	get "dns.proxy.type"() {
 		return this.#tryGetStringValue("dns.proxy.type", "socks");
 	}
+
 	get "dns.proxy.host"() {
 		return this.#tryGetStringValue("dns.proxy.host", "");
 	}
+
 	get "dns.proxy.port"() {
 		return this.#tryGetNumberValue("dns.proxy.port", 1080);
 	}
+
 	get "dns.jsdns.autoResetServerAlive"() {
 		return this.#tryGetBoolValue("dns.jsdns.autoResetServerAlive", true);
 	}
+
 	get "dns.libunbound.path"() {
 		return this.#tryGetStringValue("dns.libunbound.path", "");
 	}
+
 	get "dns.libunbound.path.relToProfileDir"() {
 		return this.#tryGetBoolValue("dns.libunbound.path.relToProfileDir", true);
 	}
@@ -330,15 +364,19 @@ export class BasePreferences {
 	get "policy.signRules.enable"() {
 		return this.#tryGetBoolValue("policy.signRules.enable", false);
 	}
+
 	get "policy.signRules.checkDefaultRules"() {
 		return this.#tryGetBoolValue("policy.signRules.checkDefaultRules", true);
 	}
+
 	get "policy.signRules.autoAddRule.enable"() {
 		return this.#tryGetBoolValue("policy.signRules.autoAddRule.enable", false);
 	}
+
 	get "policy.signRules.autoAddRule.onlyIfFromAddressInSDID"() {
 		return this.#tryGetBoolValue("policy.signRules.autoAddRule.onlyIfFromAddressInSDID", true);
 	}
+
 	/**
 	 * - 0: from address
 	 * - 1: subdomain
@@ -347,9 +385,11 @@ export class BasePreferences {
 	get "policy.signRules.autoAddRule.for"() {
 		return this.#tryGetNumberValue("policy.signRules.autoAddRule.for", 0);
 	}
+
 	get "policy.signRules.sdid.allowSubDomains"() {
 		return this.#tryGetBoolValue("policy.signRules.sdid.allowSubDomains", true);
 	}
+
 	get "policy.signRules.error.wrong_sdid.asWarning"() {
 		return this.#tryGetBoolValue("policy.signRules.error.wrong_sdid.asWarning", false);
 	}
@@ -357,6 +397,7 @@ export class BasePreferences {
 	get "policy.DMARC.shouldBeSigned.enable"() {
 		return this.#tryGetBoolValue("policy.DMARC.shouldBeSigned.enable", false);
 	}
+
 	/**
 	 * - none
 	 * - quarantine
@@ -378,6 +419,7 @@ export class BasePreferences {
 		/** @readonly */
 		STRICT: 30,
 	};
+
 	/**
 	 * @returns {POLICY_DKIM_UNSIGNED_HEADERS_WARNING_MODE}
 	 */
@@ -395,12 +437,14 @@ export class BasePreferences {
 	 * - 10:  when an e-mail with a valid DKIM signature is viewed  (SUCCESS)
 	 * - 20:  when an e-mail with a valid DKIM signature is viewed (including TEMPFAIL) (SUCCESS, TEMPFAIL)
 	 * - 30:  when an e-mail with a DKIM signature is viewed (SUCCESS, TEMPFAIL, PERMFAIL, loading)
+	 * - 33:  when an e-mail with a DKIM signature, SPF or DMARC result is viewed.
 	 * - 40:  when an e-mail is viewed
 	 * - 50:  when a message is viewed
 	 */
 	get "showDKIMHeader"() {
 		return this.#tryGetNumberValue("showDKIMHeader", 30);
 	}
+
 	/**
 	 * -  0:  never
 	 * - 10:  when an e-mail with a valid DKIM signature is viewed  (SUCCESS)
@@ -416,33 +460,43 @@ export class BasePreferences {
 	get "colorFrom"() {
 		return this.#tryGetBoolValue("colorFrom", true);
 	}
+
 	get "color.success.text"() {
 		return this.#tryGetStringValue("color.success.text", "windowtext");
 	}
+
 	get "color.success.background"() {
-		return this.#tryGetStringValue("color.success.background", "#00FF00");
+		return this.#tryGetStringValue("color.success.background", "rgba(0,255,0,0.5)");
 	}
+
 	get "color.warning.text"() {
 		return this.#tryGetStringValue("color.warning.text", "windowtext");
 	}
+
 	get "color.warning.background"() {
-		return this.#tryGetStringValue("color.warning.background", "orange");
+		return this.#tryGetStringValue("color.warning.background", "rgba(255,150,0,0.5)");
 	}
+
 	get "color.permfail.text"() {
 		return this.#tryGetStringValue("color.permfail.text", "windowtext");
 	}
+
 	get "color.permfail.background"() {
-		return this.#tryGetStringValue("color.permfail.background", "red");
+		return this.#tryGetStringValue("color.permfail.background", "rgba(255,0,0,0.5)");
 	}
+
 	get "color.tempfail.text"() {
 		return this.#tryGetStringValue("color.tempfail.text", "unset");
 	}
+
 	get "color.tempfail.background"() {
 		return this.#tryGetStringValue("color.tempfail.background", "unset");
 	}
+
 	get "color.nosig.text"() {
 		return this.#tryGetStringValue("color.nosig.text", "unset");
 	}
+
 	get "color.nosig.background"() {
 		return this.#tryGetStringValue("color.nosig.background", "unset");
 	}
@@ -463,6 +517,7 @@ export class BasePreferences {
 	get "debug"() {
 		return this.#tryGetBoolValue("debug", false);
 	}
+
 	/**
 	 * - Fatal
 	 * - Error
@@ -489,21 +544,19 @@ export class BasePreferences {
 	 * @returns {Promise<void>}
 	 */
 	setAccountValue(name, account, value) {
-		if (!Object.prototype.hasOwnProperty.call(BasePreferences.prototype, `account.${name}`)) {
+		if (!Object.hasOwn(BasePreferences.prototype, `account.${name}`)) {
 			throw new Error(`Can not set nonexisting account preference "${name}"`);
 		}
 		if (name === "dkim.enable" || name === "arh.read") {
 			if (typeof value !== "number") {
-				throw new Error(`Can not set account preference ${name} with type number to a ${typeof value}`);
+				throw new TypeError(`Can not set account preference ${name} with type number to a ${typeof value}`);
 			}
 			if (value < 0 || value > 2) {
 				throw new Error(`Can not set account preference ${name} to value ${value}`);
 			}
 		}
-		if (name === "arh.allowedAuthserv") {
-			if (typeof value !== "string") {
-				throw new Error(`Can not set account preference ${name} with type number to a ${typeof value}`);
-			}
+		if (name === "arh.allowedAuthserv" && typeof value !== "string") {
+			throw new TypeError(`Can not set account preference ${name} with type number to a ${typeof value}`);
 		}
 		return this._valueSetter(`account.${account}.${name}`, value);
 	}
@@ -514,13 +567,15 @@ export class BasePreferences {
 	 * @returns {boolean|number|string}
 	 */
 	getAccountValue(name, account) {
-		if (!Object.prototype.hasOwnProperty.call(BasePreferences.prototype, `account.${name}`)) {
+		if (!Object.hasOwn(BasePreferences.prototype, `account.${name}`)) {
 			throw new Error(`Can not get nonexisting account preference "${name}"`);
 		}
 		if (name === "dkim.enable" || name === "arh.read") {
 			return this.#tryGetNumberValue(`account.${account}.${name}`, 0);
 		}
+		// eslint-disable-next-line jsdoc/reject-any-type
 		/** @type {any} */
+		// eslint-disable-next-line unicorn/no-this-assignment
 		const that = this;
 		return that[`account.${name}`](account);
 	}
@@ -539,14 +594,18 @@ export class BasePreferences {
 		// 0: default, 1: yes, 2: no
 		const accBool = this.#tryGetNumberValue(`account.${account}.${name}`, 0);
 		switch (accBool) {
-			case 0:
+			case 0: {
 				return this.getBool(name);
-			case 1:
+			}
+			case 1: {
 				return true;
-			case 2:
+			}
+			case 2: {
 				return false;
-			default:
+			}
+			default: {
 				throw new Error(`Account preference ${name} has unexpected value ${accBool}`);
+			}
 		}
 	}
 
@@ -594,6 +653,11 @@ export class ObjPreferences extends BasePreferences {
  * Keeps itself in sync with the storage.
  */
 export class StorageLocalPreferences extends BasePreferences {
+	/**
+	 * @type {{[prefName: string]: boolean|number|string|undefined}}
+	 */
+	#prefsManaged = {};
+
 	constructor() {
 		const checkInitialized = () => {
 			if (!this._isInitialized) {
@@ -603,7 +667,11 @@ export class StorageLocalPreferences extends BasePreferences {
 		super(
 			(name) => {
 				checkInitialized();
-				return this._prefs[name];
+				let value = this._prefs[name];
+				if (value === undefined) {
+					value = this.#prefsManaged[name];
+				}
+				return value;
 			},
 			(name, value) => {
 				checkInitialized();
@@ -637,12 +705,16 @@ export class StorageLocalPreferences extends BasePreferences {
 				}
 				this._prefs = preferences;
 			}
+			this.#prefsManaged = await ExtensionUtils.safeGetManagedStorage();
 			browser.storage.onChanged.addListener((changes, areaName) => {
-				if (areaName !== "local") {
-					return;
-				}
-				for (const [name, change] of Object.entries(changes)) {
-					this._prefs[name] = change.newValue;
+				if (areaName === "local") {
+					for (const [name, change] of Object.entries(changes)) {
+						this._prefs[name] = change.newValue;
+					}
+				} else if (areaName === "managed") {
+					for (const [name, change] of Object.entries(changes)) {
+						this.#prefsManaged[name] = change.newValue;
+					}
 				}
 			});
 			this._isInitialized = true;
@@ -657,6 +729,7 @@ export class StorageLocalPreferences extends BasePreferences {
 	 * @override
 	 */
 	async clear() {
+		// eslint-disable-next-line jsdoc/reject-any-type
 		/** @type {{scope: string, data: any}[]} */
 		const dataStorages = [];
 		for (const dataStorageScope of StorageLocalPreferences.dataStorageScopes) {
@@ -682,7 +755,7 @@ export class StorageLocalPreferences extends BasePreferences {
  */
 StorageLocalPreferences.dataStorageScopes = [
 	"signRulesUser",
-	"keyStore"
+	"keyStore",
 ];
 
 const prefs = new StorageLocalPreferences();

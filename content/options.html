@@ -2,13 +2,14 @@
 <html>
 
 <head>
-  <meta charset='utf-8'>
+  <meta charset="utf-8">
   <title data-i18n="options_prefwindow.title"></title>
 
-  <link rel='stylesheet' type='text/css' href="chrome://global/skin/in-content/common.css">
-  <link rel='stylesheet' type='text/css' href="chrome://messenger/skin/preferences/preferences.css">
+  <link rel="stylesheet" href="chrome://global/skin/in-content/common.css">
+  <link rel="stylesheet" href="chrome://messenger/skin/preferences/preferences.css">
 
-  <link rel='stylesheet' type='text/css' href="./options.css">
+  <link rel="stylesheet" href="./colors.css">
+  <link rel="stylesheet" href="./options.css">
   <script type="module" src="./translation.mjs.js"></script>
   <script type="module" src="./options.mjs.js"></script>
 </head>
@@ -53,14 +54,17 @@
       <select data-pref="dns.resolver">
         <option data-i18n="options_dns.resolver.value.1" value="1"></option>
         <option data-i18n="options_dns.resolver.value.2" value="2"></option>
+        <option data-i18n="options_dns.resolver.value.3" value="3"></option>
       </select>
     </div>
-    <label class="checkbox" data-i18n="options_dns.getNameserversFromOS">
-      <input type="checkbox" data-pref="dns.getNameserversFromOS">
-    </label>
+    <div data-dns-resolver="1,2">
+      <label class="checkbox" data-i18n="options_dns.getNameserversFromOS">
+        <input type="checkbox" data-pref="dns.getNameserversFromOS">
+      </label>
+    </div>
     <label for="dns.nameserver" data-dns-resolver="1" data-i18n="options_dns.nameserver"></label>
     <label for="dns.nameserver" data-dns-resolver="2" data-i18n="options_dns.libunbound.nameserver"></label>
-    <div>
+    <div data-dns-resolver="1,2">
       <input id="dns.nameserver" type="text" data-pref="dns.nameserver">
     </div>
     <!-- jsdns specific options -->
@@ -101,6 +105,12 @@
       <label class="checkbox" data-i18n="options_dns.libunbound.path.relToProfileDir">
         <input type="checkbox" data-pref="dns.libunbound.path.relToProfileDir">
       </label>
+    </fieldset>
+    <!-- DoH specific options -->
+    <fieldset data-dns-resolver="3">
+      <legend data-i18n="options_dns.resolver.value.3"></legend>
+      <label for="dns.doh.server" data-i18n="options_dns.doh.server"></label>
+      <input id="dns.doh.server" type="text" data-pref="dns.doh.server" size="75">
     </fieldset>
   </main>
 
@@ -155,7 +165,7 @@
     <label class="checkbox" data-i18n="options_colorFrom">
       <input type="checkbox" data-pref="colorFrom">
     </label>
-    <fieldset class="colorGrid">
+    <fieldset id="colorFromGrid" class="colorGrid">
       <!-- <legend data-i18n="options_color"></legend> -->
       <label class="colorGridHeader" data-i18n="options_color.success"></label>
       <div>
@@ -163,6 +173,7 @@
         <input type="text" data-pref="color.success.text" size="15">
         <label data-i18n="options_color.background"></label>
         <input type="text" data-pref="color.success.background" size="15">
+        <span id="color.preview.success" class="color-preview" data-i18n="options_color.preview"></span>
       </div>
 
       <label class="colorGridHeader" data-i18n="options_color.warning"></label>
@@ -171,6 +182,7 @@
         <input type="text" data-pref="color.warning.text" size="15">
         <label data-i18n="options_color.background"></label>
         <input type="text" data-pref="color.warning.background" size="15">
+        <span id="color.preview.warning" class="color-preview" data-i18n="options_color.preview"></span>
       </div>
 
       <label class="colorGridHeader" data-i18n="options_color.permfail"></label>
@@ -179,6 +191,7 @@
         <input type="text" data-pref="color.permfail.text" size="15">
         <label data-i18n="options_color.background"></label>
         <input type="text" data-pref="color.permfail.background" size="15">
+        <span id="color.preview.permfail" class="color-preview" data-i18n="options_color.preview"></span>
       </div>
 
       <label class="colorGridHeader" data-i18n="options_color.tempfail"></label>
@@ -187,6 +200,7 @@
         <input type="text" data-pref="color.tempfail.text" size="15">
         <label data-i18n="options_color.background"></label>
         <input type="text" data-pref="color.tempfail.background" size="15">
+        <span id="color.preview.tempfail" class="color-preview" data-i18n="options_color.preview"></span>
       </div>
 
       <label class="colorGridHeader" data-i18n="options_color.nosig"></label>
@@ -195,6 +209,7 @@
         <input type="text" data-pref="color.nosig.text" size="15">
         <label data-i18n="options_color.background"></label>
         <input type="text" data-pref="color.nosig.background" size="15">
+        <span id="color.preview.nosig" class="color-preview" data-i18n="options_color.preview"></span>
       </div>
     </fieldset>
     <div>
@@ -203,6 +218,7 @@
         <option data-i18n="options_showDKIM.value.0" value="0"></option>
         <option data-i18n="options_showDKIM.value.10" value="10"></option>
         <option data-i18n="options_showDKIM.value.30" value="30"></option>
+        <option data-i18n="options_showDKIM.value.33" value="33"></option>
         <option data-i18n="options_showDKIM.value.40" value="40"></option>
         <option data-i18n="options_showDKIM.value.50" value="50"></option>
       </select>
@@ -329,17 +345,19 @@
       <p><a href="https://github.com/lieser/dkim_verifier/graphs/contributors" data-i18n="about_contributors"></a></p>
       <p data-i18n="about_translators"></p>
       <ul>
-        <li>de: ionum</li>
         <li>de: Philippe Lieser</li>
         <li>es-ES: Peter O Brien</li>
-        <li>fr: Christophe CHAUVET</li>
+        <li>fr: Anaël MOBILIA</li>
         <li>hu: Óvári</li>
         <li>it: Michele Locati</li>
         <li>ja: SAKURAI Kenichi</li>
         <li>pl: dMbski</li>
-        <li>pt-BR: David BrazSan</li>
+        <li>pt-BR: João Paulo</li>
+        <li>ru: Dmytro Kartashov</li>
+        <li>sk: Jozef Gaal</li>
         <li>sv-SE: Phoenix</li>
         <li>uk: lexxai</li>
+        <li>vi-VN: vtvinh24</li>
         <li>zh-CN: YFdyh000</li>
         <li>zh-TW: NightFeather</li>
       </ul>
@@ -350,6 +368,13 @@
         <li>
           <a href="https://github.com/JoshData/thunderbird-spf">DNS Library</a>
           <span data-i18n="about_by"></span> Joshua Tauberer
+        </li>
+        <li><a href="https://github.com/kitten/dns-message">dns-message</a></li>
+        <li>
+          <a href="https://github.com/lupomontero/psl">psl (Public Suffix List)</a>
+          <ul>
+            <li><a href="https://github.com/mathiasbynens/punycode.js">Punycode.js</a></li>
+          </ul>
         </li>
         <li><a href="https://tabulator.info/">Tabulator</a></li>
         <li><a href="https://github.com/hakanols/tweetnacl-es6">tweetnacl-es6</a></li>
