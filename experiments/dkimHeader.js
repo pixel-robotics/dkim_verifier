@@ -438,6 +438,14 @@ class DKIMHeaderField {
 		this.element._dkimValue = document.createElement("span");
 		this.element._dkimValue.style.userSelect = "text";
 
+		// Not our domain warning text
+		this.element._warningBox = document.createElement("div");
+		this.element._warningBox.style.userSelect = "text";
+		this.element._warningBox.style.borderRadius = "3px";
+		this.element._warningBox.style.padding = "20px";
+		this.element._warningBox.style.backgroundColor = "orange";
+		this.element._warningBox.style.fontSize = "large";
+
 		// DKIM warning icon
 		/** @private */
 		this._dkimWarningTooltip = new DKIMWarningsTooltipXUL(document);
@@ -489,6 +497,7 @@ class DKIMHeaderField {
 		const separator = document.createXULElement("separator");
 		separator.setAttribute("flex", "1");
 
+		headerValue.append(this.element._warningBox);
 		headerValue.append(this.element._dkimValue);
 		headerValue.append(this.element._dkimWarningIcon);
 		headerValue.append(this.element._arhDkim.box);
@@ -515,8 +524,25 @@ class DKIMHeaderField {
 	 * @param {string[]} warnings
 	 */
 	set warnings(warnings) {
-		this.element._dkimWarningIcon.style.display = warnings.length > 0 ? "" : "none";
-		this._dkimWarningTooltip.warnings = warnings;
+		// Warnings prefixed with "@@color@@" are shown in a colored box instead of the warning tooltip
+		const warningBox = this.element._warningBox;
+		warningBox.style.display = "none";
+		for (const warning of warnings) {
+			const colorMatch = warning.match(/^@@(.*?)@@/);
+			if (!colorMatch) {
+				continue;
+			}
+			const color = colorMatch[1] ?? "orange";
+			warningBox.textContent = warning.slice(colorMatch[0].length);
+			warningBox.style.backgroundColor = color;
+			warningBox.style.padding = { red: "30px", orange: "20px" }[color] ?? "5px";
+			warningBox.style.fontSize = color === "red" || color === "orange" ? "large" : "initial";
+			warningBox.style.display = "";
+		}
+
+		const tooltipWarnings = warnings.filter(warning => !warning.startsWith("@@"));
+		this.element._dkimWarningIcon.style.display = tooltipWarnings.length > 0 ? "" : "none";
+		this._dkimWarningTooltip.warnings = tooltipWarnings;
 	}
 
 	/**

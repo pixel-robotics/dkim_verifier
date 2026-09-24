@@ -458,7 +458,7 @@ export class BasePreferences {
 	}
 
 	get "colorFrom"() {
-		return this.#tryGetBoolValue("colorFrom", false);
+		return this.#tryGetBoolValue("colorFrom", true);
 	}
 
 	get "color.success.text"() {

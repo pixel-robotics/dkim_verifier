@@ -40,6 +40,15 @@
 	"DKIM_INTERNALERROR_NAME": {
 		"message": "Interner Fehler"
 	},
+	"DKIM_WARNING_NOT_LOGIVATIONS_OR_PIXEL_ROBOTICS": {
+		"message": "Achtung: Externe email. Mögliche Phishing-Attacke. Vorsicht bei Links und Anhängen."
+	},
+	"DKIM_WARNING_ADDRESS_NOT_VERIFIED": {
+		"message": "WARNING: E-mail-Adresse nicht verifiziert. Mögliche Phishing-Attacke. Vorsicht bei Links und Anhängen."
+	},
+	"DKIM_WARNING_SPOOFING_OUR_DOMAIN": {
+		"message": "Phishing-Angriff! Email an security@pixel-robotics.eu weiterleiten und danach löschen."
+	},
 	"DKIM_INTERNALERROR_DEFAULT": {
 		"message": "Fehler"
 	},
@@ -600,7 +609,7 @@
 		"message": "Über"
 	},
 	"about_name": {
-		"message": "DKIM Verifier",
+		"message": "Logivations and Pixel Robotics DKIM Verifier",
 		"description": "Name of the add-on"
 	},
 	"about_summary": {
