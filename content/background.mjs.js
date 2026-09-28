@@ -97,12 +97,19 @@ function isOurDomain(address) {
  * @param {string[]} warnings
  * @param {browser.messages.MessageHeader} message
  * @param {number} dkimResNum
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function addDomainWarning(warnings, message, dkimResNum) {
+async function addDomainWarning(warnings, message, dkimResNum) {
 	// Own drafts and sent mails are never signed, so don't warn about them
 	const folderType = message.folder?.specialUse?.[0] ?? message.folder?.type;
 	if (folderType === "drafts" || folderType === "sent") {
+		return;
+	}
+	// Copies saved by the mail client itself (e.g. sent mails in a folder Thunderbird
+	// does not know as "sent") never passed a mail server, so they have no Received header.
+	// Mail delivered to us always has one, as our mail server adds it.
+	const { headers } = await browser.messages.getFull(message.id);
+	if (!headers?.received) {
 		return;
 	}
 	/** @type {Set<number>} */
@@ -157,7 +164,7 @@ async function verifyMessage(tabId, message) {
 		if (res.dmarc && res.dmarc[0]) {
 			arh.dmarc = res.dmarc[0].result;
 		}
-		addDomainWarning(warnings, message, res.dkim[0].res_num);
+		await addDomainWarning(warnings, message, res.dkim[0].res_num);
 
 		const messageStillDisplayed = await browser.dkimHeader.setDkimHeaderResult(
 			tabId,
